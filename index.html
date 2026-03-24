@@ -156,12 +156,28 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 const SOURCES=['PayPal','Oney','Cofidis','Carte bancaire','Virement','Prélèvement','Autre'];
 
 // PIN
-let pv=’’,cp=‘1234’;
-async function loadPin(){const{data}=await sb.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();if(data)cp=data.value;}
+let pv=’’,cp=‘0000’; // défaut 0000 en attendant chargement
+async function loadPin(){
+try{
+const{data}=await sb.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();
+if(data&&data.value) cp=data.value;
+}catch(e){console.log(‘PIN load error’,e);}
+}
 function pi(n){if(pv.length>=4)return;pv+=n;upd();if(pv.length===4)chk();}
 function pd(){pv=pv.slice(0,-1);upd();document.getElementById(‘pinError’).textContent=’’;}
 function upd(){for(let i=0;i<4;i++)document.getElementById(‘d’+i).className=‘pin-dot’+(i<pv.length?’ filled’:’’);}
-async function chk(){await loadPin();if(pv===cp){document.getElementById(‘pinScreen’).style.display=‘none’;document.getElementById(‘appScreen’).style.display=‘block’;init();}else{document.getElementById(‘pinError’).textContent=‘Code incorrect’;pv=’’;upd();}}
+async function chk(){
+// Recharge le PIN à chaque tentative pour être sûr d’avoir le bon
+await loadPin();
+if(pv===cp){
+document.getElementById(‘pinScreen’).style.display=‘none’;
+document.getElementById(‘appScreen’).style.display=‘block’;
+init();
+}else{
+document.getElementById(‘pinError’).textContent=‘Code incorrect’;
+pv=’’;upd();
+}
+}
 
 let S={data:[],tab:‘all’,fa:‘tous’,fs:‘tous’,fq:’’,modal:null,payId:null,pinModal:false};
 
@@ -652,6 +668,7 @@ cp=v;S.pinModal=false;render();toast(‘PIN mis à jour ✓’);
 
 function toast(msg){const t=document.createElement(‘div’);t.className=‘toast’;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
 async function init(){await loadData();render();}
+// Précharger le PIN dès le départ pour que ce soit prêt
 loadPin();
 </script>
 
