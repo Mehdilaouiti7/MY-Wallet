@@ -205,8 +205,9 @@ function filtered(){
   const today=new Date();today.setHours(0,0,0,0);
   return S.data.filter(d=>{
     const c=cmp(d);const due=new Date(d.due+'T12:00:00');
-    if(S.tab==='upcoming'&&due<today&&c.statut!=='retard')return false;
-    if(S.tab==='past'&&due>=today)return false;
+    if(S.tab==='all'&&c.statut==='soldé')return false;
+    if(S.tab==='upcoming'&&(c.statut==='soldé'||due<today&&c.statut!=='retard'))return false;
+    if(S.tab==='past'&&c.statut!=='soldé')return false;
     const fa=S.fa;
     if(fa==='moi_all'&&d.acheteur!=='Moi')return false;
     if(fa==='moi_solo'&&!(d.acheteur==='Moi'&&!d.partage))return false;
@@ -285,9 +286,9 @@ ${al.length?`<div class="alerts">${al.map(d=>{const c=cmp(d);const cls=c.statut=
 </div>
 
 <div class="tabs">
-  <button class="tab ${S.tab==='all'?'active':''}" onclick="S.tab='all';render()">Tout (${S.data.length})</button>
+  <button class="tab ${S.tab==='all'?'active':''}" onclick="S.tab='all';render()">En cours (${S.data.filter(d=>cmp(d).statut!=='soldé').length})</button>
   <button class="tab ${S.tab==='upcoming'?'active':''}" onclick="S.tab='upcoming';render()">À venir</button>
-  <button class="tab ${S.tab==='past'?'active':''}" onclick="S.tab='past';render()">Passées</button>
+  <button class="tab ${S.tab==='past'?'active':''}" onclick="S.tab='past';render()">Soldés (${S.data.filter(d=>cmp(d).statut==='soldé').length})</button>
 </div>
 <div class="filters">
   <input placeholder="Rechercher..." value="${S.fq}" oninput="S.fq=this.value;render()" style="min-width:120px;flex:1;max-width:180px">
