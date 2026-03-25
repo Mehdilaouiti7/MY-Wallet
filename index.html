@@ -749,37 +749,80 @@ function toggleDark(){
 }
 applyDark();
 
-// Graphique
+// Graphique - reconstruit l'historique des paiements déjà effectués
 let chartInstance = null;
 function drawChart(){
   const canvas = document.getElementById('chart-mois');
   if(!canvas) return;
   if(chartInstance){ chartInstance.destroy(); chartInstance = null; }
+
   const now = new Date();
-  const labels = [], moi = [], copine = [], partage = [];
+  // Initialiser 6 mois de données
+  const months = [];
   for(let i = 5; i >= 0; i--){
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const y = d.getFullYear(), m = d.getMonth();
-    labels.push(d.toLocaleDateString('fr-FR', {month:'short', year:'2-digit'}));
-    const md = GMD(y, m);
-    const tm = md.mi.filter(x=>!x.p).reduce((s,x)=>s+x.m, 0);
-    const tc = md.co.filter(x=>!x.p).reduce((s,x)=>s+x.m, 0);
-    const tp = md.mi.filter(x=>x.p).reduce((s,x)=>s+x.m, 0) + md.co.filter(x=>x.p).reduce((s,x)=>s+x.m, 0);
-    moi.push(Math.round(tm * 100) / 100);
-    copine.push(Math.round(tc * 100) / 100);
-    partage.push(Math.round(tp * 100) / 100);
+    months.push({
+      y: d.getFullYear(), m: d.getMonth(),
+      label: d.toLocaleDateString('fr-FR', {month:'short', year:'2-digit'}),
+      moi: 0, copine: 0, partage: 0
+    });
   }
+
+  // Pour chaque achat, reconstituer les versements passés
+  G.rows.forEach(r => {
+    if(r.pays === 0) return; // aucun versement payé
+    const v = parseFloat(r.versement) || 0;
+    if(v === 0) return;
+
+    // La prochaine échéance = r.due
+    // Les versements passés = on remonte mois par mois depuis r.due
+    const nextDue = new Date(r.due + 'T12:00:00');
+
+    for(let p = 1; p <= r.pays; p++){
+      // Le versement p a été payé p mois avant la prochaine échéance
+      const paidDate = new Date(nextDue);
+      paidDate.setMonth(paidDate.getMonth() - p);
+      const py = paidDate.getFullYear();
+      const pm = paidDate.getMonth();
+
+      // Chercher si ce mois est dans nos 6 mois
+      const slot = months.find(x => x.y === py && x.m === pm);
+      if(!slot) continue;
+
+      // Montant du versement (perso ou égal)
+      const vIdx = r.pays - p; // index du versement payé
+      let montant = v;
+      if(r.versement_type === 'perso' && r.versements_perso && r.versements_perso[vIdx]) {
+        montant = parseFloat(r.versements_perso[vIdx].montant) || v;
+      }
+
+      if(r.partage) {
+        slot.partage += montant;
+      } else if(r.acheteur === 'Moi') {
+        slot.moi += montant;
+      } else {
+        slot.copine += montant;
+      }
+    }
+  });
+
+  const labels = months.map(x => x.label);
+  const dataMoi = months.map(x => Math.round(x.moi * 100) / 100);
+  const dataCopine = months.map(x => Math.round(x.copine * 100) / 100);
+  const dataPartage = months.map(x => Math.round(x.partage * 100) / 100);
+
   const dark = document.body.classList.contains('dark');
   const textColor = dark ? '#94a3b8' : '#718096';
   const gridColor = dark ? '#334155' : '#e2e8f0';
+
   chartInstance = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: '👤 Moi', data: moi, backgroundColor: '#185FA5CC', borderRadius: 6 },
-        { label: '💑 Copine', data: copine, backgroundColor: '#854F0BCC', borderRadius: 6 },
-        { label: '🤝 Partagé', data: partage, backgroundColor: '#27500ACC', borderRadius: 6 },
+        { label: '👤 Moi', data: dataMoi, backgroundColor: '#185FA5CC', borderRadius: 6 },
+        { label: '💑 Copine', data: dataCopine, backgroundColor: '#854F0BCC', borderRadius: 6 },
+        { label: '🤝 Partagé', data: dataPartage, backgroundColor: '#27500ACC', borderRadius: 6 },
       ]
     },
     options: {
@@ -793,8 +836,8 @@ function drawChart(){
         }
       },
       scales: {
-        x: { stacked: false, ticks: { color: textColor, font:{size:10} }, grid: { color: gridColor } },
-        y: { ticks: { color: textColor, font:{size:10}, callback: v => v+'€' }, grid: { color: gridColor } }
+        x: { ticks: { color: textColor, font:{size:10} }, grid: { color: gridColor } },
+        y: { ticks: { color: textColor, font:{size:10}, callback: v => v+' €' }, grid: { color: gridColor }, beginAtZero: true }
       }
     }
   });
