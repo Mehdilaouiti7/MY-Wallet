@@ -4,12 +4,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MY - Échéances</title>
+<title>MY Wallet 💛</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
-#pin-screen{position:fixed;inset:0;background:#1E3A5F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:999}
+#pin-screen{position:fixed;inset:0;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:999}
 #pin-screen h1{color:#fff;font-size:22px;font-weight:600}
 #pin-screen p{color:#90b8d8;font-size:14px}
 .pin-dots{display:flex;gap:16px}
@@ -121,26 +121,26 @@ tr:hover td{background:#f7fafc;cursor:pointer}
 </head>
 <body>
 <div id="pin-screen">
-  <h1>MY - Échéances</h1>
+  <h1>MY Wallet 💛</h1>
   <p>Entrez votre code PIN</p>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
     <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
   </div>
   <div class="pin-err" id="pin-err"></div>
-  <div class="pin-pad">
-    <button class="pin-btn" onclick="PK('1')">1</button>
-    <button class="pin-btn" onclick="PK('2')">2</button>
-    <button class="pin-btn" onclick="PK('3')">3</button>
-    <button class="pin-btn" onclick="PK('4')">4</button>
-    <button class="pin-btn" onclick="PK('5')">5</button>
-    <button class="pin-btn" onclick="PK('6')">6</button>
-    <button class="pin-btn" onclick="PK('7')">7</button>
-    <button class="pin-btn" onclick="PK('8')">8</button>
-    <button class="pin-btn" onclick="PK('9')">9</button>
+  <div class="pin-pad" id="pin-pad">
+    <button class="pin-btn" data-k="1">1</button>
+    <button class="pin-btn" data-k="2">2</button>
+    <button class="pin-btn" data-k="3">3</button>
+    <button class="pin-btn" data-k="4">4</button>
+    <button class="pin-btn" data-k="5">5</button>
+    <button class="pin-btn" data-k="6">6</button>
+    <button class="pin-btn" data-k="7">7</button>
+    <button class="pin-btn" data-k="8">8</button>
+    <button class="pin-btn" data-k="9">9</button>
     <button class="pin-btn" style="visibility:hidden"></button>
-    <button class="pin-btn" onclick="PK('0')">0</button>
-    <button class="pin-btn" onclick="PD()">⌫</button>
+    <button class="pin-btn" data-k="0">0</button>
+    <button class="pin-btn" data-k="del">⌫</button>
   </div>
 </div>
 <div id="app"></div>
@@ -158,6 +158,25 @@ SB.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single().t
 
 function PK(n){if(pv.length>=4)return;pv+=n;PR();if(pv.length===4)setTimeout(PC,100);}
 function PD(){pv=pv.slice(0,-1);PR();document.getElementById(‘pin-err’).textContent=’’;}
+
+// iOS Safari fix: use touchstart + preventDefault to avoid 300ms delay and ghost clicks
+document.addEventListener(‘DOMContentLoaded’, function() {
+const pad = document.getElementById(‘pin-pad’);
+if (!pad) return;
+function handlePin(e) {
+const btn = e.target.closest(’[data-k]’);
+if (!btn) return;
+e.preventDefault();
+e.stopPropagation();
+const k = btn.getAttribute(‘data-k’);
+if (k === ‘del’) PD();
+else PK(k);
+btn.style.background = ‘rgba(255,255,255,.3)’;
+setTimeout(() => btn.style.background = ‘’, 150);
+}
+pad.addEventListener(‘touchstart’, handlePin, {passive: false});
+pad.addEventListener(‘click’, handlePin);
+});
 function PR(){for(let i=0;i<4;i++)document.getElementById(‘pd’+i).className=‘pin-dot’+(i<pv.length?’ on’:’’);}
 async function PC(){
 const {data}=await SB.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();
@@ -287,7 +306,7 @@ const nSo=G.rows.filter(r=>calc(r).st===‘soldé’).length;
 
 document.getElementById(‘app’).innerHTML=`
 
-<div class="topbar"><h1>MY - <span>échéances</span></h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
+<div class="topbar"><h1>MY <span>Wallet</span> 💛</h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
   <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
