@@ -431,7 +431,9 @@ function render(){
     <button onclick="G.cfa='cop_s';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='cop_s'?'#185FA5':'var(--card)'};color:${G.cfa==='cop_s'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">💑 Copine seule</button>
     <button onclick="G.cfa='par';render()"    style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='par'?'#185FA5':'var(--card)'};color:${G.cfa==='par'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">🤝 Partagés</button>
   </div>
-  <canvas id="chart-mois" height="180"></canvas>
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <canvas id="chart-mois" height="180" style="min-width:500px"></canvas>
+  </div>
 </div>
 ${MB(0)}${MB(1)}
 ${al.length?`<div class="alerts">${al.map(r=>{const c=calc(r);const cls=c.st==='retard'?'a-urg':'a-wrn';const txt=c.st==='retard'?`${Math.abs(c.j)}j retard`:`${c.j}j`;return`<div class="alert ${cls}"><div class="adot"></div><strong>${r.marchand}</strong> — ${fd(r.due)} — ${f(c.cv)} — ${txt}</div>`;}).join('')}</div>`:''}
@@ -894,6 +896,8 @@ function drawChart(){
       plugins:{
         legend:{labels:{color:tc,font:{size:11},boxWidth:12}},
         tooltip:{
+          position:'nearest',
+          intersect:false,
           callbacks:{
             title: items => items[0].label,
             label: ctx => {
@@ -933,12 +937,23 @@ function drawChart(){
           displayColors:true
         }
       },
+      interaction:{mode:'index',intersect:false},
       scales:{
         x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},
         y:{ticks:{color:tc,font:{size:10},callback:v=>v+' €'},grid:{color:gc},beginAtZero:true}
       }
     }
   });
+ 
+  // Sur mobile : tap sur le canvas pour afficher le tooltip
+  canvas.onclick = function(e){
+    const points = chartInstance.getElementsAtEventForMode(e,'index',{intersect:false},true);
+    if(points.length) chartInstance.tooltip.setActiveElements(
+      chartInstance.data.datasets.map((_,di)=>({datasetIndex:di,index:points[0].index})),
+      {x:e.x,y:e.y}
+    );
+    chartInstance.update();
+  };
 }
 async function removeBg(){
   await SB.from('app_config').upsert({key:'bg_photo',value:''});
