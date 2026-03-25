@@ -918,7 +918,7 @@ function drawChart(){
       slot.itemsMoi.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
     }
     if(fa2==='moi_p' && slot.itemsPar.length){
-      html += '<div style="font-weight:600;color:#185FA5;margin-top:6px;margin-bottom:3px">💛 Partagés (ma part)</div>';
+      html += '<div style="font-weight:600;color:#185FA5;margin-top:6px;margin-bottom:3px">💛 Partagés</div>';
       slot.itemsPar.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
     }
     if(['tous','cop_s','cop_p'].includes(fa2) && slot.itemsCop.length){
