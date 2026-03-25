@@ -418,7 +418,7 @@ function render(){
 </div>
 <div class="chart-box">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px">
-    <h3 style="margin:0">📊 Dépenses par mois</h3>
+    <h3 style="margin:0">📊 ${G.sf ? "6 mois passés + 6 prédictions" : "6 derniers mois"}</h3>
     <button onclick="G.sf=!G.sf;render()" style="padding:4px 12px;border-radius:20px;border:1px solid ${G.sf?'#185FA5':'var(--border)'};background:${G.sf?'#185FA5':'var(--card)'};color:${G.sf?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
       🔮 ${G.sf?'Cacher les prédictions':'Voir prédictions (6 mois)'}
     </button>
@@ -904,11 +904,11 @@ function drawChart(){
     }
   });
 
-  // ── 6 mois futurs (prédictions basées sur les échéances) ─────
+  // ── 6 mois futurs = les 6 mois qui suivent le mois actuel ────
   const futureMonths = [];
   if(G.sf){
     for(let i = 1; i <= 6; i++){
-      const d = new Date(curY, curM + i, 1);
+      const d = new Date(curY, curM + i, 1); // avril, mai, juin...
       futureMonths.push({
         y: d.getFullYear(), m: d.getMonth(),
         label: d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}),
