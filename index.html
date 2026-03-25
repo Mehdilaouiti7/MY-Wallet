@@ -3,673 +3,503 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Échéances</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mes Échéances</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
-.pin-screen{position:fixed;inset:0;background:#1E3A5F;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:20px}
-.pin-screen h1{color:#fff;font-size:22px;font-weight:600}
-.pin-screen p{color:#90b8d8;font-size:14px}
-.pin-dots{display:flex;gap:14px}
-.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid #90b8d8;transition:background .15s}
-.pin-dot.filled{background:#fff;border-color:#fff}
-.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
-.pin-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:12px;color:#fff;font-size:22px;font-weight:500;padding:18px;cursor:pointer;transition:background .15s;font-family:inherit}
-.pin-btn:hover{background:rgba(255,255,255,.25)}
-.pin-error{color:#F09595;font-size:13px;min-height:18px;text-align:center}
-.app{max-width:1150px;margin:0 auto;padding:1rem}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+#pin-screen{position:fixed;inset:0;background:#1E3A5F;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:999}
+#pin-screen h1{color:#fff;font-size:22px;font-weight:600}
+#pin-screen p{color:#90b8d8;font-size:14px}
+.pin-dots{display:flex;gap:16px}
+.pin-dot{width:16px;height:16px;border-radius:50%;border:2px solid #90b8d8;background:transparent;transition:background .15s}
+.pin-dot.on{background:#fff;border-color:#fff}
+.pin-err{color:#F09595;font-size:13px;min-height:18px;text-align:center}
+.pin-pad{display:grid;grid-template-columns:repeat(3,80px);gap:12px}
+.pin-btn{height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.1);color:#fff;font-size:24px;font-weight:500;cursor:pointer;font-family:inherit;touch-action:manipulation}
+.pin-btn:active{background:rgba(255,255,255,.3)}
+#app{max-width:1100px;margin:0 auto;padding:1rem;display:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:8px;flex-wrap:wrap}
 .topbar h1{font-size:18px;font-weight:600}.topbar h1 span{color:#185FA5}
-.topbar-right{display:flex;gap:6px;align-items:center}
-.btn{padding:7px 13px;border-radius:8px;border:1px solid #cbd5e0;background:#fff;color:#1a202c;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
-.btn:hover{background:#f7fafc}
-.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5}
-.btn-primary:hover{background:#0C447C}
-.btn-danger{color:#A32D2D;border-color:#F09595}
-.btn-danger:hover{background:#FCEBEB}
-.btn-pay{background:#276749;color:#fff;border:none;padding:5px 11px;font-size:12px;border-radius:6px;cursor:pointer;font-family:inherit}
-.btn-pay:hover{background:#1e4f37}
+.topbar-r{display:flex;gap:6px}
+.btn{padding:7px 13px;border-radius:8px;border:1px solid #cbd5e0;background:#fff;color:#1a202c;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap;touch-action:manipulation}
+.btn:active{background:#f0f4f8}
+.btn-p{background:#185FA5;color:#fff;border-color:#185FA5}
+.btn-p:active{background:#0C447C}
+.btn-d{color:#A32D2D;border-color:#F09595}
+.btn-d:active{background:#FCEBEB}
+.btn-pay{background:#276749;color:#fff;border:none;padding:5px 11px;font-size:12px;border-radius:6px;cursor:pointer;font-family:inherit;touch-action:manipulation}
+.btn-pay:active{background:#1e4f37}
 .btn-pay:disabled{background:#a0aec0;cursor:not-allowed}
 .btn-sm{padding:4px 9px;font-size:11px}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1rem}
-.kpi{background:#fff;border-radius:10px;padding:.75rem 1rem;border:1px solid #e2e8f0;text-align:center}
-.kpi-label{font-size:10px;color:#718096;margin-bottom:3px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
-.kpi-val{font-size:17px;font-weight:700}
-.blue{color:#185FA5}.green{color:#276749}.red{color:#A32D2D}.amber{color:#854F0B}.purple{color:#534AB7}
-.month-box{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;margin-bottom:1rem}
-.month-box-title{font-size:13px;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
-.month-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.month-col h3{font-size:12px;font-weight:600;margin-bottom:.5rem;padding-bottom:5px;border-bottom:1px solid #f0f4f8}
-.month-item{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f7fafc}
-.month-item:last-child{border-bottom:none}
-.month-total{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-top:6px;margin-top:4px;border-top:1px solid #e2e8f0}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem}
+.kpi{background:#fff;border-radius:10px;padding:.75rem;border:1px solid #e2e8f0;text-align:center}
+.kpi-l{font-size:10px;color:#718096;margin-bottom:3px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.kpi-v{font-size:16px;font-weight:700}
+.c-blue{color:#185FA5}.c-red{color:#A32D2D}.c-green{color:#276749}.c-amber{color:#854F0B}.c-purple{color:#534AB7}
+.mbox{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1rem;margin-bottom:1rem}
+.mbox-t{font-size:13px;font-weight:600;margin-bottom:.75rem}
+.mcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mcol h3{font-size:12px;font-weight:600;margin-bottom:.5rem;padding-bottom:5px;border-bottom:1px solid #f0f4f8}
+.mitem{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f7fafc}
+.mitem:last-child{border-bottom:none}
+.mtotal{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding-top:6px;margin-top:4px;border-top:1px solid #e2e8f0}
 .alerts{margin-bottom:1rem}
 .alert{padding:8px 12px;border-radius:8px;margin-bottom:5px;font-size:12px;border-left:3px solid;display:flex;align-items:center;gap:8px}
-.alert.urgent{background:#FAECE7;border-color:#D85A30;color:#4A1B0C}
-.alert.warn{background:#FAEEDA;border-color:#BA7517;color:#412402}
-.alert-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.alert.urgent .alert-dot{background:#D85A30}.alert.warn .alert-dot{background:#BA7517}
-.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-bottom:1rem}
-.summary-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:.9rem}
-.summary-card h3{font-size:12px;font-weight:600;margin-bottom:.5rem;padding-bottom:5px;border-bottom:1px solid #f0f4f8}
-.summary-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
-.summary-row span:first-child{color:#718096}
-.summary-row span:last-child{font-weight:600}
+.a-urg{background:#FAECE7;border-color:#D85A30;color:#4A1B0C}
+.a-wrn{background:#FAEEDA;border-color:#BA7517;color:#412402}
+.adot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.a-urg .adot{background:#D85A30}.a-wrn .adot{background:#BA7517}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.sc{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:.9rem}
+.sc h3{font-size:12px;font-weight:600;margin-bottom:.5rem;padding-bottom:5px;border-bottom:1px solid #f0f4f8}
+.sr{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.sr span:first-child{color:#718096}.sr span:last-child{font-weight:600}
 .tabs{display:flex;gap:4px;margin-bottom:.6rem;flex-wrap:wrap}
-.tab{padding:5px 12px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;font-size:11px;cursor:pointer;color:#718096;font-family:inherit;transition:all .15s}
-.tab.active{background:#185FA5;color:#fff;border-color:#185FA5}
+.tab{padding:5px 12px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;font-size:11px;cursor:pointer;color:#718096;font-family:inherit;touch-action:manipulation}
+.tab.on{background:#185FA5;color:#fff;border-color:#185FA5}
 .filters{display:flex;gap:6px;margin-bottom:.75rem;flex-wrap:wrap;align-items:center}
 .filters select,.filters input{padding:6px 9px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#1a202c;font-size:12px;font-family:inherit}
-.cards-list{display:flex;flex-direction:column;gap:8px}
-.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:.9rem;cursor:pointer;transition:box-shadow .15s}
-.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
-.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
-.card-title{font-weight:600;font-size:14px}
-.card-notes{font-size:11px;color:#a0aec0;margin-top:1px}
-.card-badges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
-.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
-.clabel{color:#a0aec0;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
-.cval{font-weight:600;font-size:13px;margin-top:1px}
-.card-progress{margin-bottom:8px}
-.progress-bar{height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-top:2px}
-.progress-fill{height:100%;border-radius:4px}
-.card-actions{display:flex;gap:5px;flex-wrap:wrap}
-.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff}
+.cards{display:flex;flex-direction:column;gap:8px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:.9rem;cursor:pointer}
+.card:active{background:#f7fafc}
+.ch{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
+.ctitle{font-weight:600;font-size:14px}
+.cnote{font-size:11px;color:#a0aec0;margin-top:1px}
+.cbadges{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.cl{color:#a0aec0;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.cv{font-weight:600;font-size:13px;margin-top:1px}
+.pbar{height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-top:3px}
+.pfill{height:100%;border-radius:4px}
+.ca{display:flex;gap:5px;flex-wrap:wrap}
+.twrap{overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0;background:#fff}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:#f7fafc;padding:8px 10px;text-align:left;font-weight:600;font-size:10px;color:#718096;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
+th{background:#f7fafc;padding:8px 10px;text-align:left;font-weight:600;font-size:10px;color:#718096;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-transform:uppercase}
 td{padding:8px 10px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#f7fafc;cursor:pointer}
 .badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
-.b-moi{background:#E6F1FB;color:#0C447C}
-.b-copine{background:#FAEEDA;color:#633806}
-.b-partage{background:#EAF3DE;color:#27500A}
-.b-urgent{background:#FAECE7;color:#4A1B0C}
-.b-ok{background:#EAF3DE;color:#173404}
-.b-late{background:#FCEBEB;color:#501313}
-.b-done{background:#E1F5EE;color:#04342C}
-.b-src{background:#f7fafc;color:#4a5568;border:1px solid #e2e8f0}
-.remb-btn{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;font-family:inherit;white-space:nowrap}
-.remb-non{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
-.remb-oui{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
-.acts{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.b-moi{background:#E6F1FB;color:#0C447C}.b-cop{background:#FAEEDA;color:#633806}.b-par{background:#EAF3DE;color:#27500A}
+.b-ok{background:#EAF3DE;color:#173404}.b-urg{background:#FAECE7;color:#4A1B0C}.b-lat{background:#FCEBEB;color:#501313}
+.b-don{background:#E1F5EE;color:#04342C}.b-src{background:#f7fafc;color:#4a5568;border:1px solid #e2e8f0}
+.remb{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;font-family:inherit;white-space:nowrap;touch-action:manipulation}
+.remb-n{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+.remb-o{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:1rem;overflow-y:auto}
-.modal{background:#fff;border-radius:16px;padding:1.4rem;width:100%;max-width:560px;border:1px solid #e2e8f0;margin:auto}
+.modal{background:#fff;border-radius:16px;padding:1.4rem;width:100%;max-width:540px;border:1px solid #e2e8f0;margin:auto}
 .modal h2{font-size:16px;font-weight:600;margin-bottom:1rem}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.frow{display:flex;flex-direction:column;gap:4px}
-.frow.full{grid-column:1/-1}
-.frow label{font-size:11px;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-.frow input,.frow select{padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#1a202c;font-size:13px;font-family:inherit}
-.frow input:focus,.frow select:focus{outline:none;border-color:#185FA5}
+.fr{display:flex;flex-direction:column;gap:4px}
+.fr.full{grid-column:1/-1}
+.fr label{font-size:11px;color:#718096;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.fr input,.fr select{padding:8px 10px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#1a202c;font-size:13px;font-family:inherit}
+.fr input:focus,.fr select:focus{outline:none;border-color:#185FA5}
 .macts{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:.9rem;border-top:1px solid #f0f4f8}
-/* Versements perso table */
-.vperso-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
-.vperso-table th{background:#f7fafc;padding:6px 8px;text-align:center;font-weight:600;font-size:10px;color:#718096;border:1px solid #e2e8f0;text-transform:uppercase}
-.vperso-table td{padding:5px 6px;border:1px solid #e2e8f0;text-align:center}
-.vperso-table input{width:90px;padding:5px 7px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;text-align:center;font-family:inherit}
-.vperso-table input:focus{outline:none;border-color:#185FA5}
-.vperso-section{background:#f7fafc;border-radius:10px;padding:.75rem;margin-top:6px}
-.vperso-section h4{font-size:11px;font-weight:600;color:#718096;margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
-.section-divider{grid-column:1/-1;border:none;border-top:1px solid #e2e8f0;margin:4px 0}
 .psec{background:#f7fafc;border-radius:10px;padding:.9rem;margin-bottom:.9rem}
-.psec h3{font-size:13px;font-weight:600;margin-bottom:.65rem}
-.popt{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #e2e8f0;cursor:pointer}
+.psec h3{font-size:13px;font-weight:600;margin-bottom:.6rem}
+.popt{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #e2e8f0}
 .popt:last-child{border-bottom:none}
-.popt input[type=radio]{width:16px;height:16px;cursor:pointer;accent-color:#185FA5}
-.popt label{font-size:13px;cursor:pointer;flex:1}
+.popt input[type=radio]{width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:#185FA5}
+.popt label{font-size:13px;cursor:pointer;flex:1;line-height:1.4}
 .popt label b{color:#185FA5}
 .psum{background:#EAF3DE;border-radius:8px;padding:.75rem;margin-top:.75rem;font-size:12px}
-.psum-row{display:flex;justify-content:space-between;padding:2px 0}
-.psum-row.tot{font-weight:700;border-top:1px solid #C0DD97;margin-top:5px;padding-top:6px;font-size:13px}
+.psr{display:flex;justify-content:space-between;padding:2px 0}
+.psr.tot{font-weight:700;border-top:1px solid #C0DD97;margin-top:5px;padding-top:6px;font-size:13px}
+.vpt{width:100%;border-collapse:collapse;margin-top:6px;font-size:12px}
+.vpt th{background:#f7fafc;padding:6px 8px;text-align:center;font-weight:600;font-size:10px;color:#718096;border:1px solid #e2e8f0;text-transform:uppercase}
+.vpt td{padding:5px 6px;border:1px solid #e2e8f0;text-align:center}
+.vpt input{width:90px;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-size:12px;text-align:center;font-family:inherit}
 .empty{text-align:center;padding:2rem;color:#a0aec0;font-size:13px}
-.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a202c;color:#fff;padding:9px 18px;border-radius:8px;font-size:12px;z-index:500;animation:fu .2s ease;white-space:nowrap;pointer-events:none}
-@keyframes fu{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-@media(min-width:768px){.cards-list{display:none}.table-wrap{display:block}}
-@media(max-width:767px){.table-wrap{display:none}.cards-list{display:flex}}
-@media(max-width:480px){.fg{grid-template-columns:1fr}.frow.full{grid-column:1}.month-cols{grid-template-columns:1fr}}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a202c;color:#fff;padding:9px 18px;border-radius:8px;font-size:12px;z-index:999;white-space:nowrap;pointer-events:none;animation:tin .2s ease}
+@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media(min-width:768px){.cards{display:none}.twrap{display:block}}
+@media(max-width:767px){.twrap{display:none}.cards{display:flex}}
+@media(max-width:480px){.fg{grid-template-columns:1fr}.fr.full{grid-column:1}.mcols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="pin-screen" id="pinScreen">
+<div id="pin-screen">
   <h1>Mes Échéances</h1>
   <p>Entrez votre code PIN</p>
-  <div class="pin-dots" id="pinDots">
-    <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
-    <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
   </div>
-  <div class="pin-error" id="pinError"></div>
+  <div class="pin-err" id="pin-err"></div>
   <div class="pin-pad">
-    <button class="pin-btn" onclick="pi('1')">1</button><button class="pin-btn" onclick="pi('2')">2</button><button class="pin-btn" onclick="pi('3')">3</button>
-    <button class="pin-btn" onclick="pi('4')">4</button><button class="pin-btn" onclick="pi('5')">5</button><button class="pin-btn" onclick="pi('6')">6</button>
-    <button class="pin-btn" onclick="pi('7')">7</button><button class="pin-btn" onclick="pi('8')">8</button><button class="pin-btn" onclick="pi('9')">9</button>
-    <button class="pin-btn" style="visibility:hidden"></button><button class="pin-btn" onclick="pi('0')">0</button><button class="pin-btn" onclick="pd()">⌫</button>
+    <button class="pin-btn" onclick="PK('1')">1</button>
+    <button class="pin-btn" onclick="PK('2')">2</button>
+    <button class="pin-btn" onclick="PK('3')">3</button>
+    <button class="pin-btn" onclick="PK('4')">4</button>
+    <button class="pin-btn" onclick="PK('5')">5</button>
+    <button class="pin-btn" onclick="PK('6')">6</button>
+    <button class="pin-btn" onclick="PK('7')">7</button>
+    <button class="pin-btn" onclick="PK('8')">8</button>
+    <button class="pin-btn" onclick="PK('9')">9</button>
+    <button class="pin-btn" style="visibility:hidden"></button>
+    <button class="pin-btn" onclick="PK('0')">0</button>
+    <button class="pin-btn" onclick="PD()">⌫</button>
   </div>
 </div>
-<div class="app" id="appScreen" style="display:none"></div>
+<div id="app"></div>
 <script>
-const SB_URL='https://mqfyuprpztiyfpleannt.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZnl1cHJwenRpeWZwbGVhbm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjg3MjUsImV4cCI6MjA4OTkwNDcyNX0.4Fvc-fNlwhVp0HvOEL-Z92i9W4YvVSAgen0ihBzlGOk';
-const sb=supabase.createClient(SB_URL,SB_KEY);
-const SOURCES=['PayPal','Oney','Cofidis','Carte bancaire','Virement','Prélèvement','Autre'];
+const {createClient} = supabase;
+const SB = createClient(
+  'https://mqfyuprpztiyfpleannt.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZnl1cHJwenRpeWZwbGVhbm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjg3MjUsImV4cCI6MjA4OTkwNDcyNX0.4Fvc-fNlwhVp0HvOEL-Z92i9W4YvVSAgen0ihBzlGOk'
+);
+const SRC=['PayPal','Oney','Cofidis','Carte bancaire','Virement','Prélèvement','Autre'];
 
 // PIN
-let pv=’’,cp=‘0000’; // défaut 0000 en attendant chargement
-async function loadPin(){
-try{
-const{data}=await sb.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();
-if(data&&data.value) cp=data.value;
-}catch(e){console.log(‘PIN load error’,e);}
-}
-function pi(n){if(pv.length>=4)return;pv+=n;upd();if(pv.length===4)chk();}
-function pd(){pv=pv.slice(0,-1);upd();document.getElementById(‘pinError’).textContent=’’;}
-function upd(){for(let i=0;i<4;i++)document.getElementById(‘d’+i).className=‘pin-dot’+(i<pv.length?’ filled’:’’);}
-async function chk(){
-// Recharge le PIN à chaque tentative pour être sûr d’avoir le bon
-await loadPin();
-if(pv===cp){
-document.getElementById(‘pinScreen’).style.display=‘none’;
-document.getElementById(‘appScreen’).style.display=‘block’;
-init();
+let pv=’’, pc=‘0000’;
+SB.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single().then(({data})=>{if(data)pc=data.value;});
+
+function PK(n){if(pv.length>=4)return;pv+=n;PR();if(pv.length===4)setTimeout(PC,100);}
+function PD(){pv=pv.slice(0,-1);PR();document.getElementById(‘pin-err’).textContent=’’;}
+function PR(){for(let i=0;i<4;i++)document.getElementById(‘pd’+i).className=‘pin-dot’+(i<pv.length?’ on’:’’);}
+async function PC(){
+const {data}=await SB.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();
+if(data&&data.value)pc=data.value;
+if(pv===pc){
+document.getElementById(‘pin-screen’).style.display=‘none’;
+document.getElementById(‘app’).style.display=‘block’;
+AI();
 }else{
-document.getElementById(‘pinError’).textContent=‘Code incorrect’;
-pv=’’;upd();
+document.getElementById(‘pin-err’).textContent=‘Code incorrect’;
+pv=’’;PR();
 }
 }
 
-let S={data:[],tab:‘all’,fa:‘tous’,fs:‘tous’,fq:’’,modal:null,payId:null,pinModal:false};
+// STATE
+let G={rows:[],tab:‘all’,fa:‘tous’,fs:‘tous’,fq:’’,eid:null,pid:null,pm:false};
 
-async function loadData(){const{data}=await sb.from(‘echeances’).select(’*’).order(‘due’);S.data=data||[];}
-function fmt(n){return Number(n).toLocaleString(‘fr-FR’,{minimumFractionDigits:2,maximumFractionDigits:2})+’ €’;}
-function nextMonth(s){const d=new Date(s+‘T12:00:00’);d.setMonth(d.getMonth()+1);return d.toISOString().split(‘T’)[0];}
-
-// Retourne le montant du versement N (0-based) pour un achat
-function getVersement(d, idx){
-if(d.versement_type===‘perso’&&d.versements_perso&&d.versements_perso[idx]){
-return parseFloat(d.versements_perso[idx].montant)||0;
-}
-return parseFloat(d.versement)||0;
+async function LD(){
+const {data,error}=await SB.from(‘echeances’).select(’*’).order(‘due’);
+if(error){T(’Erreur: ’+error.message);return;}
+G.rows=data||[];
 }
 
-// Retourne la part copine pour le versement N
-function getCopinePart(d, idx){
-if(!d.partage) return 0;
-const v=getVersement(d,idx);
-if(d.partage_type===‘perso’&&d.versements_perso&&d.versements_perso[idx]){
-return parseFloat(d.versements_perso[idx].copine_montant)||0;
-}
-return v/2; // 50/50 par défaut
-}
+function f(n){return Number(n).toLocaleString(‘fr-FR’,{minimumFractionDigits:2,maximumFractionDigits:2})+’ €’;}
+function addM(s){const d=new Date(s+‘T12:00:00’);d.setMonth(d.getMonth()+1);return d.toISOString().split(‘T’)[0];}
+function fd(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’});}
+function fdf(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’,year:‘numeric’});}
+function mn(off=0){const d=new Date();if(off)d.setMonth(d.getMonth()+off);return d.toLocaleDateString(‘fr-FR’,{month:‘long’,year:‘numeric’});}
 
-function cmp(d){
-const rest=d.total_inst-d.pays;
-// Calcul total selon type
-let total=0,deja=0,restant=0,partCopine=0;
-if(d.versement_type===‘perso’&&d.versements_perso&&d.versements_perso.length){
-for(let i=0;i<d.total_inst;i++){
-const v=getVersement(d,i);
-total+=v;
-if(i<d.pays){deja+=v;}
-else{restant+=v;if(d.partage&&!d.rembourse)partCopine+=getCopinePart(d,i);}
+function gv(r,i){
+if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso[i])return parseFloat(r.versements_perso[i].montant)||0;
+return parseFloat(r.versement)||0;
 }
-} else {
-const v=parseFloat(d.versement)||0;
-total=d.montant_total||(v*d.total_inst);
-deja=v*d.pays;
-restant=v*rest;
-if(d.partage&&!d.rembourse){
-if(d.partage_type===‘perso’&&d.versements_perso){
-for(let i=d.pays;i<d.total_inst;i++) partCopine+=getCopinePart(d,i);
-} else partCopine=restant/2;
+function gc(r,i){
+if(!r.partage)return 0;
+const v=gv(r,i);
+if(r.partage_type===‘perso’&&r.versements_perso&&r.versements_perso[i])return parseFloat(r.versements_perso[i].copine_montant)||0;
+return v/2;
+}
+function calc(r){
+const rest=r.total_inst-r.pays;
+let total=0,deja=0,restant=0,pc2=0;
+if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso.length){
+for(let i=0;i<r.total_inst;i++){const v=gv(r,i);total+=v;if(i<r.pays)deja+=v;else{restant+=v;if(r.partage&&!r.rembourse)pc2+=gc(r,i);}}
+}else{
+const v=parseFloat(r.versement)||0;
+total=parseFloat(r.montant_total)||v*r.total_inst;
+deja=v*r.pays;restant=v*rest;
+if(r.partage&&!r.rembourse){
+if(r.partage_type===‘perso’&&r.versements_perso){for(let i=r.pays;i<r.total_inst;i++)pc2+=gc(r,i);}
+else pc2=restant/2;
 }
 }
 const today=new Date();today.setHours(0,0,0,0);
-const due=new Date(d.due+‘T12:00:00’);
-const jours=Math.round((due-today)/86400000);
-const statut=rest===0?‘soldé’:jours<0?‘retard’:jours<=7?‘urgent’:‘ok’;
-const lp=d.last_paid_date?new Date(d.last_paid_date+‘T12:00:00’):null;
-const nowKey=`${new Date().getMonth()}-${new Date().getFullYear()}`;
-const lpKey=lp?`${lp.getMonth()}-${lp.getFullYear()}`:’’;
-const payDis=(lpKey===nowKey)||rest===0;
-// Montant versement courant (prochain à payer)
-const currentVersement=getVersement(d,d.pays);
-const currentCopine=getCopinePart(d,d.pays);
-return{rest,total,deja,restant,partCopine,jours,statut,payDis,currentVersement,currentCopine};
+const due=new Date(r.due+‘T12:00:00’);
+const j=Math.round((due-today)/86400000);
+const st=rest===0?‘soldé’:j<0?‘retard’:j<=7?‘urgent’:‘ok’;
+const lp=r.last_paid_date?new Date(r.last_paid_date+‘T12:00:00’):null;
+const nk=new Date().getMonth()+’-’+new Date().getFullYear();
+const lk=lp?(lp.getMonth()+’-’+lp.getFullYear()):’’;
+const pd2=(lk===nk)||rest===0;
+return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,cv:gv(r,r.pays),cc:gc(r,r.pays)};
 }
 
-function getMonthData(year, month){
-const s=new Date(year,month,1),e=new Date(year,month+1,0);
-const moi=[],cop=[];
-S.data.forEach(d=>{
-const c=cmp(d);if(c.statut===‘soldé’)return;
-const due=new Date(d.due+‘T12:00:00’);
+function GMD(y,m){
+const s=new Date(y,m,1),e=new Date(y,m+1,0);
+const mi=[],co=[];
+G.rows.forEach(r=>{
+const c=calc(r);if(c.st===‘soldé’)return;
+const due=new Date(r.due+‘T12:00:00’);
 if(due>=s&&due<=e){
-const mv=c.currentVersement;
-const cv=c.currentCopine;
-if(d.acheteur===‘Moi’||d.partage) moi.push({n:d.marchand,m:d.partage?mv-cv:mv,p:d.partage});
-if(d.acheteur===‘Copine’||d.partage) cop.push({n:d.marchand,m:d.partage?cv:mv,p:d.partage});
+if(r.acheteur===‘Moi’||r.partage)mi.push({n:r.marchand,m:r.partage?c.cv-c.cc:c.cv,p:r.partage});
+if(r.acheteur===‘Copine’||r.partage)co.push({n:r.marchand,m:r.partage?c.cc:c.cv,p:r.partage});
 }
 });
-return{moi,cop};
+return{mi,co};
 }
-function monthData(){const now=new Date();return getMonthData(now.getFullYear(),now.getMonth());}
-function nextMonthData(){const now=new Date();const nm=now.getMonth()+1;const ny=nm>11?now.getFullYear()+1:now.getFullYear();return getMonthData(ny,nm>11?0:nm);}
-function nextMonthName(){const d=new Date();d.setMonth(d.getMonth()+1);return d.toLocaleDateString(‘fr-FR’,{month:‘long’,year:‘numeric’});}
 
 function filtered(){
-const today=new Date();today.setHours(0,0,0,0);
-return S.data.filter(d=>{
-const c=cmp(d);const due=new Date(d.due+‘T12:00:00’);
-if(S.tab===‘all’&&c.statut===‘soldé’)return false;
-if(S.tab===‘upcoming’&&(c.statut===‘soldé’||due<today&&c.statut!==‘retard’))return false;
-if(S.tab===‘past’&&c.statut!==‘soldé’)return false;
-const fa=S.fa;
-if(fa===‘moi_all’&&d.acheteur!==‘Moi’)return false;
-if(fa===‘moi_solo’&&!(d.acheteur===‘Moi’&&!d.partage))return false;
-if(fa===‘cop_all’&&d.acheteur!==‘Copine’)return false;
-if(fa===‘cop_solo’&&!(d.acheteur===‘Copine’&&!d.partage))return false;
-if(fa===‘partage’&&!d.partage)return false;
-if(S.fs!==‘tous’&&d.source!==S.fs)return false;
-if(S.fq&&!d.marchand.toLowerCase().includes(S.fq.toLowerCase())&&!(d.notes||’’).toLowerCase().includes(S.fq.toLowerCase()))return false;
+const t=new Date();t.setHours(0,0,0,0);
+return G.rows.filter(r=>{
+const c=calc(r);const due=new Date(r.due+‘T12:00:00’);
+if(G.tab===‘all’&&c.st===‘soldé’)return false;
+if(G.tab===‘upcoming’&&(c.st===‘soldé’||(due<t&&c.st!==‘retard’)))return false;
+if(G.tab===‘past’&&c.st!==‘soldé’)return false;
+if(G.fa===‘moi_all’&&r.acheteur!==‘Moi’)return false;
+if(G.fa===‘moi_solo’&&!(r.acheteur===‘Moi’&&!r.partage))return false;
+if(G.fa===‘cop_all’&&r.acheteur!==‘Copine’)return false;
+if(G.fa===‘cop_solo’&&!(r.acheteur===‘Copine’&&!r.partage))return false;
+if(G.fa===‘partage’&&!r.partage)return false;
+if(G.fs!==‘tous’&&r.source!==G.fs)return false;
+if(G.fq&&!r.marchand.toLowerCase().includes(G.fq.toLowerCase())&&!(r.notes||’’).toLowerCase().includes(G.fq.toLowerCase()))return false;
 return true;
 }).sort((a,b)=>new Date(a.due)-new Date(b.due));
 }
 
 function kpis(){
 let te=0,tr=0,tp=0,mr=0,cr=0;
-S.data.forEach(d=>{const c=cmp(d);te+=c.total;tr+=c.restant;if(d.partage)tp+=c.partCopine;if(d.acheteur===‘Moi’)mr+=d.partage?c.restant-c.partCopine:c.restant;if(d.acheteur===‘Copine’)cr+=c.restant;});
+G.rows.forEach(r=>{const c=calc(r);te+=c.total;tr+=c.restant;if(r.partage)tp+=c.pc;if(r.acheteur===‘Moi’)mr+=r.partage?c.restant-c.pc:c.restant;if(r.acheteur===‘Copine’)cr+=c.restant;});
 return{te,tr,tp,mr,cr};
 }
 
-function fd(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’});}
-function fdf(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’,year:‘numeric’});}
-function monthName(){return new Date().toLocaleDateString(‘fr-FR’,{month:‘long’,year:‘numeric’});}
-function sBadge(s){const m={soldé:[‘b-done’,‘Soldé’],retard:[‘b-late’,‘Retard’],urgent:[‘b-urgent’,‘Urgent’],ok:[‘b-ok’,‘OK’]};const[c,t]=m[s];return`<span class="badge ${c}">${t}</span>`;}
-function aBadge(d){
-if(d.partage){
-const label=d.partage_type===‘perso’?‘Partagé perso’:‘Partagé 50/50’;
-return`<span class="badge b-partage">${label}</span>`;
+function SB2(s){const m={soldé:[‘b-don’,‘Soldé’],retard:[‘b-lat’,‘Retard’],urgent:[‘b-urg’,‘Urgent’],ok:[‘b-ok’,‘OK’]};const[cl,t]=m[s];return`<span class="badge ${cl}">${t}</span>`;}
+function AB(r){if(r.partage)return`<span class="badge b-par">${r.partage_type==='perso'?'Partagé perso':'Partagé 50/50'}</span>`;if(r.acheteur===‘Copine’)return`<span class="badge b-cop">Copine</span>`;return`<span class="badge b-moi">Moi</span>`;}
+function JT(j){if(j<0)return`<span class="c-red" style="font-weight:700">${Math.abs(j)}j</span>`;if(j===0)return`<span style="color:#D85A30;font-weight:700">Auj.</span>`;if(j<=7)return`<span style="color:#D85A30;font-weight:600">${j}j</span>`;return`<span style="color:#718096">${j}j</span>`;}
+
+function MB(off){
+const now=new Date();
+const d=GMD(now.getFullYear(),now.getMonth()+off);
+const tm=d.mi.reduce((s,i)=>s+i.m,0),tc=d.co.reduce((s,i)=>s+i.m,0);
+const bc=off===0?’#e2e8f0’:’#c7d2fe’,bg=off===0?’#fff’:’#fafafa’,tc2=off===0?’#1a202c’:’#4338ca’;
+return`<div class="mbox" style="border-color:${bc};background:${bg}"> <div class="mbox-t" style="color:${tc2}">📅 ${mn(off)}</div> <div class="mcols"> <div><h3 class="c-blue">👤 Moi</h3> ${d.mi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':d.mi.map(i=>`<div class="mitem"><span style="color:#4a5568">${i.n}${i.p?’ <small style="color:#27500A">(partage)</small>’:’’}</span><span class="c-blue" style="font-weight:600">${f(i.m)}</span></div>`).join('')} ${d.mi.length>0?`<div class="mtotal"><span>Total</span><span class="c-blue">${f(tm)}</span></div>`:''} </div> <div><h3 class="c-amber">💑 Copine</h3> ${d.co.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':d.co.map(i=>`<div class="mitem"><span style="color:#4a5568">${i.n}${i.p?’ <small style="color:#27500A">(partage)</small>’:’’}</span><span class="c-amber" style="font-weight:600">${f(i.m)}</span></div>`).join('')} ${d.co.length>0?`<div class="mtotal"><span>Total</span><span class="c-amber">${f(tc)}</span></div>`:’’}
+</div>
+</div>
+
+  </div>`;
 }
-if(d.acheteur===‘Copine’)return`<span class="badge b-copine">Copine</span>`;
-return`<span class="badge b-moi">Moi</span>`;
-}
-function jt(j){if(j<0)return`<span class="red" style="font-weight:700">${Math.abs(j)}j</span>`;if(j===0)return`<span style="color:#D85A30;font-weight:700">Auj.</span>`;if(j<=7)return`<span style="color:#D85A30;font-weight:600">${j}j</span>`;return`<span style="color:#718096">${j}j</span>`;}
 
 function render(){
 const k=kpis();
-const al=S.data.filter(d=>{const c=cmp(d);return c.statut===‘urgent’||c.statut===‘retard’;}).sort((a,b)=>new Date(a.due)-new Date(b.due));
+const al=G.rows.filter(r=>{const c=calc(r);return c.st===‘urgent’||c.st===‘retard’;}).sort((a,b)=>new Date(a.due)-new Date(b.due));
 const rows=filtered();
-const md=monthData();
-const nmd=nextMonthData();
-const tmoi=md.moi.reduce((s,i)=>s+i.m,0);
-const tcop=md.cop.reduce((s,i)=>s+i.m,0);
-const tnmoi=nmd.moi.reduce((s,i)=>s+i.m,0);
-const tncop=nmd.cop.reduce((s,i)=>s+i.m,0);
 let sm={e:0,d:0,r:0},sc={e:0,d:0,r:0},sp={e:0,d:0,r:0,a:0};
-S.data.forEach(d=>{const c=cmp(d);if(d.partage){sp.e+=c.total;sp.d+=c.deja;sp.r+=c.restant;sp.a+=c.partCopine;}else if(d.acheteur===‘Moi’){sm.e+=c.total;sm.d+=c.deja;sm.r+=c.restant;}else{sc.e+=c.total;sc.d+=c.deja;sc.r+=c.restant;}});
+G.rows.forEach(r=>{const c=calc(r);if(r.partage){sp.e+=c.total;sp.d+=c.deja;sp.r+=c.restant;sp.a+=c.pc;}else if(r.acheteur===‘Moi’){sm.e+=c.total;sm.d+=c.deja;sm.r+=c.restant;}else{sc.e+=c.total;sc.d+=c.deja;sc.r+=c.restant;}});
+const nEn=G.rows.filter(r=>calc(r).st!==‘soldé’).length;
+const nSo=G.rows.filter(r=>calc(r).st===‘soldé’).length;
 
-document.getElementById(‘appScreen’).innerHTML=`
+document.getElementById(‘app’).innerHTML=`
 
-<div class="topbar">
-  <h1>Mes <span>échéances</span></h1>
-  <div class="topbar-right">
-    <button class="btn" onclick="S.pinModal=true;render()" style="font-size:11px">🔑 PIN</button>
-    <button class="btn btn-primary" onclick="openM(null)">+ Ajouter</button>
-  </div>
-</div>
+<div class="topbar"><h1>Mes <span>échéances</span></h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
-  <div class="kpi"><div class="kpi-label">Total engagé</div><div class="kpi-val blue">${fmt(k.te)}</div></div>
-  <div class="kpi"><div class="kpi-label">Reste à payer</div><div class="kpi-val red">${fmt(k.tr)}</div></div>
-  <div class="kpi"><div class="kpi-label">Ma part</div><div class="kpi-val blue">${fmt(k.mr)}</div></div>
-  <div class="kpi"><div class="kpi-label">Part copine</div><div class="kpi-val amber">${fmt(k.cr)}</div></div>
-  <div class="kpi"><div class="kpi-label">À récupérer</div><div class="kpi-val purple">${fmt(k.tp)}</div></div>
+  <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
+  <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
+  <div class="kpi"><div class="kpi-l">Ma part</div><div class="kpi-v c-blue">${f(k.mr)}</div></div>
+  <div class="kpi"><div class="kpi-l">Part copine</div><div class="kpi-v c-amber">${f(k.cr)}</div></div>
+  <div class="kpi"><div class="kpi-l">À récupérer</div><div class="kpi-v c-purple">${f(k.tp)}</div></div>
 </div>
-<div class="month-box">
-  <div class="month-box-title">📅 Ce mois — ${monthName()}</div>
-  <div class="month-cols">
-    <div>
-      <h3 class="blue">👤 Moi à payer</h3>
-      ${md.moi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien ce mois</div>':md.moi.map(i=>`<div class="month-item"><span style="color:#4a5568">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span class="blue" style="font-weight:600">${fmt(i.m)}</span></div>`).join('')}
-      ${md.moi.length>0?`<div class="month-total"><span>Total</span><span class="blue">${fmt(tmoi)}</span></div>`:''}
-    </div>
-    <div>
-      <h3 class="amber">💑 Copine à payer</h3>
-      ${md.cop.length===0?'<div style="font-size:12px;color:#a0aec0">Rien ce mois</div>':md.cop.map(i=>`<div class="month-item"><span style="color:#4a5568">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span class="amber" style="font-weight:600">${fmt(i.m)}</span></div>`).join('')}
-      ${md.cop.length>0?`<div class="month-total"><span>Total</span><span class="amber">${fmt(tcop)}</span></div>`:''}
-    </div>
-  </div>
-</div>
-<div class="month-box" style="border-color:#c7d2fe;background:#fafafa">
-  <div class="month-box-title" style="color:#4338ca">📆 Mois prochain — ${nextMonthName()}</div>
-  <div class="month-cols">
-    <div>
-      <h3 style="color:#4338ca">👤 Moi</h3>
-      ${nmd.moi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien le mois prochain</div>':nmd.moi.map(i=>`<div class="month-item"><span style="color:#4a5568">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span style="color:#4338ca;font-weight:600">${fmt(i.m)}</span></div>`).join('')}
-      ${nmd.moi.length>0?`<div class="month-total"><span>Total</span><span style="color:#4338ca">${fmt(tnmoi)}</span></div>`:''}
-    </div>
-    <div>
-      <h3 style="color:#b45309">💑 Copine</h3>
-      ${nmd.cop.length===0?'<div style="font-size:12px;color:#a0aec0">Rien le mois prochain</div>':nmd.cop.map(i=>`<div class="month-item"><span style="color:#4a5568">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span style="color:#b45309;font-weight:600">${fmt(i.m)}</span></div>`).join('')}
-      ${nmd.cop.length>0?`<div class="month-total"><span>Total</span><span style="color:#b45309">${fmt(tncop)}</span></div>`:''}
-    </div>
-  </div>
-</div>
-${al.length?`<div class="alerts">${al.map(d=>{const c=cmp(d);const cls=c.statut==='retard'?'urgent':'warn';const txt=c.statut==='retard'?`${Math.abs(c.jours)}j retard`:`${c.jours}j`;return`<div class="alert ${cls}"><div class="alert-dot"></div><strong>${d.marchand}</strong> — ${fd(d.due)} — ${fmt(c.currentVersement)} — ${txt}</div>`;}).join('')}</div>`:''}
-<div class="summary-grid">
-  <div class="summary-card"><h3 class="blue">👤 Moi (solo)</h3><div class="summary-row"><span>Total</span><span>${fmt(sm.e)}</span></div><div class="summary-row"><span>Payé</span><span class="green">${fmt(sm.d)}</span></div><div class="summary-row"><span>Reste</span><span class="red">${fmt(sm.r)}</span></div></div>
-  <div class="summary-card"><h3 class="amber">💑 Copine (solo)</h3><div class="summary-row"><span>Total</span><span>${fmt(sc.e)}</span></div><div class="summary-row"><span>Payé</span><span class="green">${fmt(sc.d)}</span></div><div class="summary-row"><span>Reste</span><span class="red">${fmt(sc.r)}</span></div></div>
-  <div class="summary-card"><h3 style="color:#27500A">🤝 Partagés</h3><div class="summary-row"><span>Total</span><span>${fmt(sp.e)}</span></div><div class="summary-row"><span>Payé</span><span class="green">${fmt(sp.d)}</span></div><div class="summary-row"><span>Reste</span><span class="red">${fmt(sp.r)}</span></div><div class="summary-row" style="border-top:1px solid #f0f4f8;margin-top:4px;padding-top:5px"><span>À récupérer</span><span class="purple">${fmt(sp.a)}</span></div></div>
+${MB(0)}${MB(1)}
+${al.length?`<div class="alerts">${al.map(r=>{const c=calc(r);const cls=c.st==='retard'?'a-urg':'a-wrn';const txt=c.st==='retard'?`${Math.abs(c.j)}j retard`:`${c.j}j`;return`<div class="alert ${cls}"><div class="adot"></div><strong>${r.marchand}</strong> — ${fd(r.due)} — ${f(c.cv)} — ${txt}</div>`;}).join('')}</div>`:''}
+<div class="sg">
+  <div class="sc"><h3 class="c-blue">👤 Moi (solo)</h3><div class="sr"><span>Total</span><span>${f(sm.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sm.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sm.r)}</span></div></div>
+  <div class="sc"><h3 class="c-amber">💑 Copine (solo)</h3><div class="sr"><span>Total</span><span>${f(sc.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sc.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sc.r)}</span></div></div>
+  <div class="sc"><h3 style="color:#27500A">🤝 Partagés</h3><div class="sr"><span>Total</span><span>${f(sp.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sp.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sp.r)}</span></div><div class="sr" style="border-top:1px solid #f0f4f8;margin-top:4px;padding-top:4px"><span>À récupérer</span><span class="c-purple">${f(sp.a)}</span></div></div>
 </div>
 <div class="tabs">
-  <button class="tab ${S.tab==='all'?'active':''}" onclick="S.tab='all';render()">En cours (${S.data.filter(d=>cmp(d).statut!=='soldé').length})</button>
-  <button class="tab ${S.tab==='upcoming'?'active':''}" onclick="S.tab='upcoming';render()">À venir</button>
-  <button class="tab ${S.tab==='past'?'active':''}" onclick="S.tab='past';render()">Soldés (${S.data.filter(d=>cmp(d).statut==='soldé').length})</button>
+  <button class="tab ${G.tab==='all'?'on':''}" onclick="G.tab='all';render()">En cours (${nEn})</button>
+  <button class="tab ${G.tab==='upcoming'?'on':''}" onclick="G.tab='upcoming';render()">À venir</button>
+  <button class="tab ${G.tab==='past'?'on':''}" onclick="G.tab='past';render()">Soldés (${nSo})</button>
 </div>
 <div class="filters">
-  <input placeholder="Rechercher..." value="${S.fq}" oninput="S.fq=this.value;render()" style="min-width:120px;flex:1;max-width:180px">
-  <select onchange="S.fa=this.value;render()">
-    <option value="tous" ${S.fa==='tous'?'selected':''}>Tous</option>
-    <option value="moi_all" ${S.fa==='moi_all'?'selected':''}>Moi (partagés inclus)</option>
-    <option value="moi_solo" ${S.fa==='moi_solo'?'selected':''}>Moi sans partagés</option>
-    <option value="cop_all" ${S.fa==='cop_all'?'selected':''}>Copine (partagés inclus)</option>
-    <option value="cop_solo" ${S.fa==='cop_solo'?'selected':''}>Copine sans partagés</option>
-    <option value="partage" ${S.fa==='partage'?'selected':''}>Partagés</option>
+  <input placeholder="Rechercher..." value="${G.fq}" oninput="G.fq=this.value;render()" style="min-width:120px;flex:1;max-width:180px">
+  <select onchange="G.fa=this.value;render()">
+    <option value="tous" ${G.fa==='tous'?'selected':''}>Tous</option>
+    <option value="moi_all" ${G.fa==='moi_all'?'selected':''}>Moi (partagés inclus)</option>
+    <option value="moi_solo" ${G.fa==='moi_solo'?'selected':''}>Moi sans partagés</option>
+    <option value="cop_all" ${G.fa==='cop_all'?'selected':''}>Copine (partagés inclus)</option>
+    <option value="cop_solo" ${G.fa==='cop_solo'?'selected':''}>Copine sans partagés</option>
+    <option value="partage" ${G.fa==='partage'?'selected':''}>Partagés</option>
   </select>
-  <select onchange="S.fs=this.value;render()">
+  <select onchange="G.fs=this.value;render()">
     <option value="tous">Toutes sources</option>
-    ${SOURCES.map(s=>`<option value="${s}" ${S.fs===s?'selected':''}>${s}</option>`).join('')}
+    ${SRC.map(s=>`<option value="${s}" ${G.fs===s?'selected':''}>${s}</option>`).join('')}
   </select>
 </div>
-<div class="cards-list">
-${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(d=>{
-  const c=cmp(d);const pct=Math.round((d.pays/d.total_inst)*100);
-  const bc=c.statut==='soldé'?'#276749':c.statut==='retard'?'#A32D2D':'#185FA5';
-  const persoTag=d.versement_type==='perso'?'<span class="badge" style="background:#EEF2FF;color:#3730A3;font-size:9px">Perso</span>':'';
-  return`<div class="card" onclick="openM('${d.id}')">
-    <div class="card-header">
-      <div><div class="card-title">${d.marchand}</div>${d.notes?`<div class="card-notes">${d.notes}</div>`:''}</div>
-      <div style="text-align:right"><div style="font-size:15px;font-weight:700" class="blue">${fmt(c.currentVersement)}</div><div style="font-size:10px;color:#a0aec0">${d.versement_type==='perso'?'versement perso':'/versement'}</div></div>
+<div class="cards">
+${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
+  const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);
+  const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';
+  return`<div class="card" onclick="OE('${r.id}')">
+    <div class="ch"><div><div class="ctitle">${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
+      <div style="text-align:right"><div style="font-size:15px;font-weight:700" class="c-blue">${f(c.cv)}</div><div style="font-size:10px;color:#a0aec0">/versement</div></div>
     </div>
-    <div class="card-badges">${aBadge(d)}${sBadge(c.statut)}<span class="badge b-src">${d.source||'—'}</span>${persoTag}</div>
-    <div class="card-grid">
-      <div><div class="clabel">Total achat</div><div class="cval">${fmt(c.total)}</div></div>
-      <div><div class="clabel">Restant</div><div class="cval red">${fmt(c.restant)}</div></div>
-      <div><div class="clabel">Prochaine éch.</div><div class="cval">${fd(d.due)}</div></div>
-      <div><div class="clabel">Jours</div><div class="cval">${jt(c.jours)}</div></div>
+    <div class="cbadges">${AB(r)}${SB2(c.st)}<span class="badge b-src">${r.source||'—'}</span></div>
+    <div class="cgrid">
+      <div><div class="cl">Total achat</div><div class="cv">${f(c.total)}</div></div>
+      <div><div class="cl">Restant</div><div class="cv c-red">${f(c.restant)}</div></div>
+      <div><div class="cl">Prochaine éch.</div><div class="cv">${fd(r.due)}</div></div>
+      <div><div class="cl">Jours</div><div class="cv">${JT(c.j)}</div></div>
     </div>
-    <div class="card-progress">
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:#a0aec0;margin-bottom:2px"><span>${d.pays}/${d.total_inst}</span><span>${pct}%</span></div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${bc}"></div></div>
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#a0aec0;margin-bottom:2px"><span>${r.pays}/${r.total_inst}</span><span>${pct}%</span></div>
+      <div class="pbar"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div>
     </div>
-    <div class="card-actions" onclick="event.stopPropagation()">
-      <button class="btn-pay" ${c.payDis?'disabled':''} onclick="openPay('${d.id}')">${c.payDis&&c.statut!=='soldé'?'✓ Payé':'💳 Payer'}</button>
-      ${d.partage?`<button class="remb-btn ${d.rembourse?'remb-oui':'remb-non'}" onclick="togRemb('${d.id}',${d.rembourse})">${d.rembourse?'✓ Remb.':'⏳ Non remb.'}</button>`:''}
-      <button class="btn btn-sm btn-danger" onclick="delItem('${d.id}')">Suppr.</button>
+    <div class="ca" onclick="event.stopPropagation()">
+      <button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓ Payé':'💳 Payer'}</button>
+      ${r.partage?`<button class="remb ${r.rembourse?'remb-o':'remb-n'}" onclick="TR('${r.id}',${r.rembourse})">${r.rembourse?'✓ Remb.':'⏳ Non remb.'}</button>`:''}
+      <button class="btn btn-sm btn-d" onclick="DR('${r.id}')">Suppr.</button>
     </div>
   </div>`;
 }).join('')}
 </div>
-<div class="table-wrap">
-${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr>
-  <th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Total achat</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Part copine</th><th>Actions</th>
-</tr></thead><tbody>
-${rows.map(d=>{
-  const c=cmp(d);const pct=Math.round((d.pays/d.total_inst)*100);
-  const bc=c.statut==='soldé'?'#276749':c.statut==='retard'?'#A32D2D':'#185FA5';
-  return`<tr onclick="openM('${d.id}')">
-    <td><div style="font-weight:500">${d.marchand}</div>${d.notes?`<div style="font-size:10px;color:#a0aec0">${d.notes}</div>`:''}</td>
-    <td><span class="badge b-src">${d.source||'—'}</span></td>
-    <td>${aBadge(d)}</td>
-    <td style="font-weight:600">${fmt(c.currentVersement)}${d.versement_type==='perso'?'<div style="font-size:9px;color:#a0aec0">perso</div>':''}</td>
-    <td>${fmt(c.total)}</td>
-    <td><div style="font-size:10px;color:#a0aec0">${d.pays}/${d.total_inst}</div><div class="progress-bar" style="width:72px"><div class="progress-fill" style="width:${pct}%;background:${bc}"></div></div></td>
-    <td style="font-weight:600" class="${c.restant>0?'red':'green'}">${fmt(c.restant)}</td>
-    <td style="white-space:nowrap">${fdf(d.due)}</td>
-    <td>${jt(c.jours)}</td>
-    <td>${sBadge(c.statut)}</td>
-    <td>${d.partage?`<button class="remb-btn ${d.rembourse?'remb-oui':'remb-non'}" onclick="event.stopPropagation();togRemb('${d.id}',${d.rembourse})">${d.rembourse?'✓ Remb.':'⏳ Non'}</button>`:'<span style="color:#e2e8f0">—</span>'}</td>
-    <td onclick="event.stopPropagation()"><div class="acts">
-      <button class="btn-pay" ${c.payDis?'disabled':''} onclick="openPay('${d.id}')">${c.payDis&&c.statut!=='soldé'?'✓':'💳'}</button>
-      <button class="btn btn-sm btn-danger" onclick="delItem('${d.id}')">✕</button>
-    </div></td>
-  </tr>`;
-}).join('')}
+<div class="twrap">
+${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
+${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';return`<tr onclick="OE('${r.id}')">
+  <td><div style="font-weight:500">${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
+  <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
+  <td style="font-weight:600">${f(c.cv)}</td><td>${f(c.total)}</td>
+  <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
+  <td style="font-weight:600" class="${c.restant>0?'c-red':'c-green'}">${f(c.restant)}</td>
+  <td style="white-space:nowrap">${fdf(r.due)}</td><td>${JT(c.j)}</td><td>${SB2(c.st)}</td>
+  <td>${r.partage?`<button class="remb ${r.rembourse?'remb-o':'remb-n'}" onclick="event.stopPropagation();TR('${r.id}',${r.rembourse})">${r.rembourse?'✓':'⏳'}</button>`:'—'}</td>
+  <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px"><button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓':'💳'}</button><button class="btn btn-sm btn-d" onclick="DR('${r.id}')">✕</button></div></td>
+</tr>`;}).join('')}
 </tbody></table>`}
 </div>
-${S.modal?editModal():''}
-${S.payId?payModal():''}
-${S.pinModal?pinModal():''}
-`;
+${G.eid!==null?EM():''}${G.pid?PM():''}${G.pm?PiM():''}`;
 }
 
-// ─── EDIT MODAL ───────────────────────────────────────────────────────────────
-function editModal(){
-const isE=S.modal!==‘new’;
-const d=isE?S.data.find(x=>x.id===S.modal):{marchand:’’,versement:’’,montant_total:’’,pays:0,total_inst:4,due:’’,acheteur:‘Moi’,partage:false,partage_type:‘50/50’,versement_type:‘egal’,versements_perso:null,source:‘Carte bancaire’,notes:’’};
-if(!d)return’’;
-const vtype=d.versement_type||‘egal’;
-const ptype=d.partage_type||‘50/50’;
-const nbInst=parseInt(d.total_inst)||4;
-// Build versements perso table
-let vpersoRows=’’;
-if(vtype===‘perso’){
-const showCopine=d.partage&&ptype===‘perso’;
-vpersoRows=`<div class="vperso-section"> <h4>Saisir chaque versement${showCopine?' et la part de ta copine':''}</h4> <table class="vperso-table"> <thead><tr><th>#</th><th>Montant (€)</th>${showCopine?'<th>Part copine (€)</th>':''}</tr></thead> <tbody> ${Array.from({length:nbInst},(_,i)=>{ const vp=(d.versements_perso&&d.versements_perso[i])||{}; return`<tr>
-<td style="color:#718096;font-weight:600">${i+1}</td>
-<td><input type="number" step="0.01" id="vp_m_${i}" value="${vp.montant||''}" placeholder="0.00" oninput="updatePersoTotal()"></td>
-${showCopine?`<td><input type="number" step="0.01" id="vp_c_${i}" value="${vp.copine_montant||''}" placeholder="0.00"></td>`:’’}
-</tr>`; }).join('')} </tbody> </table> <div style="margin-top:8px;font-size:12px;color:#718096">Total calculé : <span id="persoTotal" style="font-weight:600;color:#185FA5">0,00 €</span></div> </div>`;
-}
+function EM(){
+const isN=G.eid===‘new’;
+const r=isN?{marchand:’’,versement:’’,montant_total:’’,pays:0,total_inst:4,due:’’,acheteur:‘Moi’,partage:false,partage_type:‘50/50’,versement_type:‘egal’,versements_perso:null,source:‘Carte bancaire’,notes:’’}:G.rows.find(x=>x.id===G.eid);
+if(!r)return’’;
+const vt=r.versement_type||‘egal’;const pt=r.partage_type||‘50/50’;const nb=parseInt(r.total_inst)||4;
+const sc2=r.partage&&pt===‘perso’;
+const vph=vt===‘perso’?`<div style="background:#f7fafc;border-radius:10px;padding:.75rem;margin-top:4px"> <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px">Saisir chaque versement${sc2?' et la part copine':''}</div> <table class="vpt"><thead><tr><th>#</th><th>Montant (€)</th>${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody> ${Array.from({length:nb},(_,i)=>{const vp=(r.versements_perso&&r.versements_perso[i])||{};return`<tr><td style="color:#718096;font-weight:600">${i+1}</td><td><input type="number" step="0.01" id="vpm_${i}" value="${vp.montant||''}" placeholder="0.00" oninput="CVT()"></td>${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" value="${vp.copine_montant||''}" placeholder="0.00"></td>`:’’}</tr>`;}).join(’’)}
+</tbody></table>
+<div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>
 
-return`<div class="overlay" onclick="if(event.target===this){S.modal=null;render()}"><div class="modal">
-<h2>${isE?‘Modifier l'achat’:‘Ajouter un achat’}</h2>
-<div class="fg">
-<div class="frow full"><label>Marchand *</label><input id="fm" value="${d.marchand||''}" placeholder="Ex: Amazon..."></div>
-
-```
-  <div class="frow full"><label>Type de versements</label>
-    <select id="fvtype" onchange="toggleVperso()">
-      <option value="egal" ${vtype==='egal'?'selected':''}>Versements égaux</option>
-      <option value="perso" ${vtype==='perso'?'selected':''}>Versements personnalisés (montants différents)</option>
-    </select>
-  </div>
-
-  <div class="frow" id="fv-row" style="${vtype==='perso'?'display:none':''}"><label>Versement (€) *</label><input id="fv" type="number" step="0.01" value="${d.versement||''}" oninput="act()"></div>
-  <div class="frow"><label>Nb versements total</label><input id="ft" type="number" min="1" value="${d.total_inst||4}" oninput="act();toggleVperso()"></div>
-  <div class="frow" id="ftt-row" style="${vtype==='perso'?'display:none':''}"><label>Montant total (€)</label><input id="ftt" type="number" step="0.01" value="${d.montant_total||''}" placeholder="Auto" oninput="this.dataset.m=1"></div>
-  <div class="frow"><label>Versements payés</label><input id="fp" type="number" min="0" value="${d.pays||0}"></div>
-  <div class="frow"><label>Prochaine échéance *</label><input id="fd" type="date" value="${d.due||''}"></div>
-  <div class="frow"><label>Source</label><select id="fsr">${SOURCES.map(s=>`<option value="${s}" ${(d.source||'Carte bancaire')===s?'selected':''}>${s}</option>`).join('')}</select></div>
-  <div class="frow"><label>Acheteur (CB)</label><select id="fa"><option value="Moi" ${(d.acheteur||'Moi')==='Moi'?'selected':''}>Moi</option><option value="Copine" ${d.acheteur==='Copine'?'selected':''}>Copine</option></select></div>
-
-  <div class="frow full"><label>Partage avec ta copine</label>
-    <select id="fpa" onchange="togglePartageType()">
-      <option value="non" ${!d.partage?'selected':''}>Non partagé</option>
-      <option value="50/50" ${d.partage&&ptype==='50/50'?'selected':''}>Partagé 50/50</option>
-      <option value="perso" ${d.partage&&ptype==='perso'?'selected':''}>Partagé personnalisé (montant perso par versement)</option>
-    </select>
-  </div>
-
-  <div class="frow full" id="vperso-container">${vpersoRows}</div>
-  <div class="frow full"><label>Notes</label><input id="fn" value="${d.notes||''}" placeholder="Ex: Vacances..."></div>
-</div>
-<div class="macts">
-  <button class="btn" onclick="S.modal=null;render()">Annuler</button>
-  <button class="btn btn-primary" onclick="saveItem(${isE?`'${d.id}'`:'null'})">${isE?'Enregistrer':'Ajouter'}</button>
-</div>
-```
-
+  </div>`:'';
+  return`<div class="overlay" onclick="if(event.target===this){G.eid=null;render()}"><div class="modal">
+    <h2>${isN?'Ajouter un achat':'Modifier l\'achat'}</h2>
+    <div class="fg">
+      <div class="fr full"><label>Marchand *</label><input id="em" value="${r.marchand||''}" placeholder="Ex: Amazon..."></div>
+      <div class="fr full"><label>Type de versements</label><select id="evt" onchange="RVP()"><option value="egal" ${vt==='egal'?'selected':''}>Versements égaux</option><option value="perso" ${vt==='perso'?'selected':''}>Versements personnalisés</option></select></div>
+      <div class="fr" id="ev-r" ${vt==='perso'?'style="display:none"':''}><label>Versement (€) *</label><input id="ev" type="number" step="0.01" value="${r.versement||''}" oninput="AT()"></div>
+      <div class="fr"><label>Nb versements</label><input id="et" type="number" min="1" value="${r.total_inst||4}" oninput="AT();RVP()"></div>
+      <div class="fr" id="ett-r" ${vt==='perso'?'style="display:none"':''}><label>Montant total (€)</label><input id="ett" type="number" step="0.01" value="${r.montant_total||''}" placeholder="Auto" oninput="this.dataset.m=1"></div>
+      <div class="fr"><label>Versements payés</label><input id="ep" type="number" min="0" value="${r.pays||0}"></div>
+      <div class="fr"><label>Prochaine échéance *</label><input id="ed" type="date" value="${r.due||''}"></div>
+      <div class="fr"><label>Source</label><select id="esr">${SRC.map(s=>`<option value="${s}" ${(r.source||'Carte bancaire')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fr"><label>Acheteur (CB)</label><select id="ea"><option value="Moi" ${(r.acheteur||'Moi')==='Moi'?'selected':''}>Moi</option><option value="Copine" ${r.acheteur==='Copine'?'selected':''}>Copine</option></select></div>
+      <div class="fr full"><label>Partage copine</label><select id="epa" onchange="RVP()"><option value="non" ${!r.partage?'selected':''}>Non partagé</option><option value="50/50" ${r.partage&&pt==='50/50'?'selected':''}>Partagé 50/50</option><option value="perso" ${r.partage&&pt==='perso'?'selected':''}>Partagé personnalisé</option></select></div>
+      <div class="fr full" id="vp-w">${vph}</div>
+      <div class="fr full"><label>Notes</label><input id="en" value="${r.notes||''}" placeholder="Ex: Vacances..."></div>
+    </div>
+    <div class="macts"><button class="btn" onclick="G.eid=null;render()">Annuler</button><button class="btn btn-p" onclick="SR(${isN?"'new'":`'${r.id}'`})">${isN?'Ajouter':'Enregistrer'}</button></div>
   </div></div>`;
 }
 
-function toggleVperso(){
-const vtype=document.getElementById(‘fvtype’).value;
-const nb=parseInt(document.getElementById(‘ft’).value)||4;
-const ptype=document.getElementById(‘fpa’)?.value||‘non’;
-const isPerso=vtype===‘perso’;
-document.getElementById(‘fv-row’).style.display=isPerso?‘none’:’’;
-document.getElementById(‘ftt-row’).style.display=isPerso?‘none’:’’;
-// Rebuild perso rows
-const container=document.getElementById(‘vperso-container’);
-if(isPerso){
-const showCopine=ptype===‘perso’;
-container.innerHTML=`<div class="vperso-section"> <h4>Saisir chaque versement${showCopine?' et la part de ta copine':''}</h4> <table class="vperso-table"> <thead><tr><th>#</th><th>Montant (€)</th>${showCopine?'<th>Part copine (€)</th>':''}</tr></thead> <tbody>${Array.from({length:nb},(_,i)=>`<tr>
-<td style="color:#718096;font-weight:600">${i+1}</td>
-<td><input type="number" step="0.01" id="vp_m_${i}" placeholder="0.00" oninput="updatePersoTotal()"></td>
-${showCopine?`<td><input type="number" step="0.01" id="vp_c_${i}" placeholder="0.00"></td>`:’’}
-</tr>`).join('')}</tbody> </table> <div style="margin-top:8px;font-size:12px;color:#718096">Total calculé : <span id="persoTotal" style="font-weight:600;color:#185FA5">0,00 €</span></div> </div>`;
-} else {
-container.innerHTML=’’;
-}
+function AT(){const v=parseFloat(document.getElementById(‘ev’)?.value)||0;const t=parseInt(document.getElementById(‘et’)?.value)||0;const el=document.getElementById(‘ett’);if(el&&v&&t&&!el.dataset.m)el.value=(v*t).toFixed(2);}
+function CVT(){const nb=parseInt(document.getElementById(‘et’)?.value)||4;let tot=0;for(let i=0;i<nb;i++){const el=document.getElementById(`vpm_${i}`);if(el)tot+=parseFloat(el.value)||0;}const el=document.getElementById(‘vpt-t’);if(el)el.textContent=f(tot);}
+function RVP(){
+const vt=document.getElementById(‘evt’)?.value;const nb=parseInt(document.getElementById(‘et’)?.value)||4;const pa=document.getElementById(‘epa’)?.value||‘non’;
+const ip=vt===‘perso’;const sc2=ip&&pa===‘perso’;
+const evR=document.getElementById(‘ev-r’);const ettR=document.getElementById(‘ett-r’);
+if(evR)evR.style.display=ip?‘none’:’’;if(ettR)ettR.style.display=ip?‘none’:’’;
+const w=document.getElementById(‘vp-w’);if(!w)return;
+if(!ip){w.innerHTML=’’;return;}
+w.innerHTML=`<div style="background:#f7fafc;border-radius:10px;padding:.75rem"> <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px">Saisir chaque versement${sc2?' et la part copine':''}</div> <table class="vpt"><thead><tr><th>#</th><th>Montant (€)</th>${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody> ${Array.from({length:nb},(_,i)=>`<tr><td style="color:#718096;font-weight:600">${i+1}</td><td><input type="number" step="0.01" id="vpm_${i}" placeholder="0.00" oninput="CVT()"></td>${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" placeholder="0.00"></td>`:’’}</tr>`).join(’’)}
+</tbody></table>
+<div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>
+
+  </div>`;
 }
 
-function togglePartageType(){
-const ptype=document.getElementById(‘fpa’).value;
-const vtype=document.getElementById(‘fvtype’).value;
-if(vtype===‘perso’) toggleVperso(); // rebuild table avec/sans colonne copine
-}
-
-function updatePersoTotal(){
-const nb=parseInt(document.getElementById(‘ft’).value)||4;
-let total=0;
-for(let i=0;i<nb;i++){const el=document.getElementById(`vp_m_${i}`);if(el)total+=parseFloat(el.value)||0;}
-const el=document.getElementById(‘persoTotal’);
-if(el)el.textContent=fmt(total);
-}
-
-function act(){
-const v=parseFloat(document.getElementById(‘fv’)?.value)||0;
-const t=parseInt(document.getElementById(‘ft’)?.value)||0;
-const el=document.getElementById(‘ftt’);
-if(el&&v&&t&&!el.dataset.m)el.value=(v*t).toFixed(2);
-}
-
-// ─── PAY MODAL ────────────────────────────────────────────────────────────────
-function payModal(){
-const d=S.data.find(x=>x.id===S.payId);if(!d)return’’;
-const c=cmp(d);
-const cv=c.currentVersement;
-const cc=c.currentCopine;
-return`<div class="overlay" onclick="if(event.target===this){S.payId=null;render()}"><div class="modal"> <h2>💳 Payer — ${d.marchand}</h2> <div class="psec"><h3>Que voulez-vous payer ?</h3> <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="updPS()"> <label for="pt1">Payer la prochaine échéance <b>${fmt(cv)}</b><br><small style="color:#718096">→ Prochaine éch. : ${fd(nextMonth(d.due))}</small></label></div> <div class="popt"><input type="radio" name="pt" id="pt2" value="tot" onchange="updPS()"> <label for="pt2">Solder le reste complet <b>${fmt(c.restant)}</b></label></div> </div> ${d.partage?`<div class="psec"><h3>Part de ma copine</h3>
-<div class="popt"><input type="radio" name="cp" id="cp1" value="non" checked onchange="updPS()"><label for="cp1">Pas encore remboursée</label></div>
-<div class="popt"><input type="radio" name="cp" id="cp2" value="oui" onchange="updPS()"><label for="cp2">Ma copine a payé sa part <b>${fmt(cc)}</b></label></div>
+function PM(){
+const r=G.rows.find(x=>x.id===G.pid);if(!r)return’’;
+const c=calc(r);
+return`<div class="overlay" onclick="if(event.target===this){G.pid=null;render()}"><div class="modal"> <h2>💳 Payer — ${r.marchand}</h2> <div class="psec"><h3>Que voulez-vous payer ?</h3> <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="UPS()"><label for="pt1">Payer la prochaine échéance <b>${f(c.cv)}</b><br><small style="color:#718096">→ Prochaine éch. : ${fd(addM(r.due))}</small></label></div> <div class="popt"><input type="radio" name="pt" id="pt2" value="tot" onchange="UPS()"><label for="pt2">Solder le reste complet <b>${f(c.restant)}</b></label></div> </div> ${r.partage?`<div class="psec"><h3>Part de ma copine</h3>
+<div class="popt"><input type="radio" name="cp" id="cp1" value="non" checked onchange="UPS()"><label for="cp1">Pas encore remboursée</label></div>
+<div class="popt"><input type="radio" name="cp" id="cp2" value="oui" onchange="UPS()"><label for="cp2">Ma copine a payé sa part <b>${f(c.cc)}</b></label></div>
 </div>`:’’}
 <div class="psum" id="ps"></div>
-<div class="macts">
-<button class="btn" onclick="S.payId=null;render()">Annuler</button>
-<button class="btn btn-primary" onclick="confirmPay('${d.id}')">✓ Confirmer</button>
-</div>
+<div class="macts"><button class="btn" onclick="G.pid=null;render()">Annuler</button><button class="btn btn-p" onclick="CP('${r.id}')">✓ Confirmer</button></div>
 
   </div></div>`;
 }
 
-function updPS(){
-const d=S.data.find(x=>x.id===S.payId);if(!d)return;
-const c=cmp(d);
+function UPS(){
+const r=G.rows.find(x=>x.id===G.pid);if(!r)return;
+const c=calc(r);
 const pt=document.querySelector(‘input[name=“pt”]:checked’)?.value||‘ech’;
-const cpO=d.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
-const m=pt===‘tot’?c.restant:c.currentVersement;
-const copPart=pt===‘tot’?c.partCopine:c.currentCopine;
-const deb=cpO?m-copPart:m;
-let h=`<div class="psum-row"><span>Montant</span><span>${fmt(m)}</span></div>`;
-if(d.partage)h+=`<div class="psum-row"><span>Part copine</span><span>${fmt(copPart)}</span></div><div class="psum-row"><span>Remboursée ?</span><span>${cpO?'✓ Oui':'⏳ Non'}</span></div>`;
-h+=`<div class="psum-row tot"><span>Je débourse</span><span class="green">${fmt(deb)}</span></div>`;
+const co=r.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
+const m=pt===‘tot’?c.restant:c.cv;const cp2=pt===‘tot’?c.pc:c.cc;const deb=co?m-cp2:m;
+let h=`<div class="psr"><span>Montant</span><span>${f(m)}</span></div>`;
+if(r.partage)h+=`<div class="psr"><span>Part copine</span><span>${f(cp2)}</span></div><div class="psr"><span>Remboursée ?</span><span>${co?'✓ Oui':'⏳ Non'}</span></div>`;
+h+=`<div class="psr tot"><span>Je débourse</span><span class="c-green">${f(deb)}</span></div>`;
 document.getElementById(‘ps’).innerHTML=h;
 }
 
-function pinModal(){
-return`<div class="overlay" onclick="if(event.target===this){S.pinModal=false;render()}"><div class="modal">
-<h2>🔑 Changer le code PIN</h2>
-<div class="fg"><div class="frow full"><label>Nouveau PIN (4 chiffres)</label><input id="np" type="tel" maxlength="4" placeholder="Ex: 5678"></div></div>
-<div class="macts">
-<button class="btn" onclick="S.pinModal=false;render()">Annuler</button>
-<button class="btn btn-primary" onclick="savePin()">Enregistrer</button>
-</div>
+function PiM(){return`<div class="overlay" onclick="if(event.target===this){G.pm=false;render()}"><div class="modal">
 
-  </div></div>`;
-}
+  <h2>🔑 Changer le code PIN</h2>
+  <div class="fg"><div class="fr full"><label>Nouveau PIN (4 chiffres)</label><input id="np" type="tel" maxlength="4" placeholder="Ex: 5678"></div></div>
+  <div class="macts"><button class="btn" onclick="G.pm=false;render()">Annuler</button><button class="btn btn-p" onclick="SPC()">Enregistrer</button></div>
+</div></div>`;}
 
-function openM(id){S.modal=id||‘new’;render();}
-function openPay(id){S.payId=id;render();setTimeout(updPS,50);}
+function OE(id){G.eid=id||‘new’;render();}
+function OP(id){G.pid=id;render();setTimeout(UPS,50);}
 
-async function togRemb(id,cur){await sb.from(‘echeances’).update({rembourse:!cur}).eq(‘id’,id);await loadData();render();toast(!cur?‘✓ Remboursé’:‘Annulé’);}
-async function delItem(id){if(!confirm(‘Supprimer ?’))return;await sb.from(‘echeances’).delete().eq(‘id’,id);await loadData();render();toast(‘Supprimé’);}
+async function TR(id,cur){await SB.from(‘echeances’).update({rembourse:!cur}).eq(‘id’,id);await LD();render();T(!cur?‘✓ Remboursé’:‘Annulé’);}
+async function DR(id){if(!confirm(‘Supprimer ?’))return;await SB.from(‘echeances’).delete().eq(‘id’,id);await LD();render();T(‘Supprimé’);}
 
-async function saveItem(id){
-const marchand=document.getElementById(‘fm’).value.trim();
-const pays=parseInt(document.getElementById(‘fp’).value)||0;
-const total_inst=parseInt(document.getElementById(‘ft’).value)||4;
-const due=document.getElementById(‘fd’).value;
-const acheteur=document.getElementById(‘fa’).value;
-const paVal=document.getElementById(‘fpa’).value;
-const partage=paVal!==‘non’;
-const partage_type=paVal===‘non’?‘50/50’:paVal;
-const source=document.getElementById(‘fsr’).value;
-const notes=document.getElementById(‘fn’).value.trim();
-const versement_type=document.getElementById(‘fvtype’).value;
-if(!marchand||!due){alert(‘Champs obligatoires manquants’);return;}
-
+async function SR(id){
+const marchand=document.getElementById(‘em’).value.trim();
+const pays=parseInt(document.getElementById(‘ep’).value)||0;
+const total_inst=parseInt(document.getElementById(‘et’).value)||4;
+const due=document.getElementById(‘ed’).value;
+const acheteur=document.getElementById(‘ea’).value;
+const pav=document.getElementById(‘epa’).value;
+const partage=pav!==‘non’;const partage_type=pav===‘non’?‘50/50’:pav;
+const source=document.getElementById(‘esr’).value;
+const notes=document.getElementById(‘en’).value.trim();
+const vt=document.getElementById(‘evt’).value;
+if(!marchand||!due){alert(‘Marchand et date obligatoires’);return;}
 let versement=0,montant_total=0,versements_perso=null;
-
-if(versement_type===‘perso’){
-// Collect versements perso
-const showCopine=partage&&partage_type===‘perso’;
-versements_perso=[];
-let tot=0;
-for(let i=0;i<total_inst;i++){
-const m=parseFloat(document.getElementById(`vp_m_${i}`)?.value)||0;
-const c=showCopine?(parseFloat(document.getElementById(`vp_c_${i}`)?.value)||0):0;
-versements_perso.push({montant:m,copine_montant:c});
-tot+=m;
-}
-montant_total=tot;
-versement=versements_perso[0]?.montant||0; // premier versement comme référence
-} else {
-versement=parseFloat(document.getElementById(‘fv’).value)||0;
+if(vt===‘perso’){
+const sc2=partage&&partage_type===‘perso’;versements_perso=[];let tot=0;
+for(let i=0;i<total_inst;i++){const mv=parseFloat(document.getElementById(`vpm_${i}`)?.value)||0;const cv2=sc2?(parseFloat(document.getElementById(`vpc_${i}`)?.value)||0):0;versements_perso.push({montant:mv,copine_montant:cv2});tot+=mv;}
+montant_total=tot;versement=versements_perso[0]?.montant||0;
+}else{
+versement=parseFloat(document.getElementById(‘ev’)?.value)||0;
 if(!versement){alert(‘Montant du versement manquant’);return;}
-const mr=document.getElementById(‘ftt’).value;
-montant_total=mr?parseFloat(mr):versement*total_inst;
+const mr=document.getElementById(‘ett’)?.value;montant_total=mr?parseFloat(mr):versement*total_inst;
+}
+const item={marchand,versement,montant_total,versement_type:vt,versements_perso,pays,total_inst,due,acheteur,partage,partage_type,source,notes};
+if(id===‘new’){await SB.from(‘echeances’).insert({…item,rembourse:false});T(‘Ajouté ✓’);}
+else{await SB.from(‘echeances’).update(item).eq(‘id’,id);T(‘Modifié ✓’);}
+await LD();G.eid=null;render();
 }
 
-const item={marchand,versement,montant_total,versement_type,versements_perso,pays,total_inst,due,acheteur,partage,partage_type,source,notes};
-if(id!==null){await sb.from(‘echeances’).update(item).eq(‘id’,id);toast(‘Modifié ✓’);}
-else{await sb.from(‘echeances’).insert({…item,rembourse:false});toast(‘Ajouté ✓’);}
-await loadData();S.modal=null;render();
-}
-
-async function confirmPay(id){
-const d=S.data.find(x=>x.id===id);if(!d)return;
-const c=cmp(d);
+async function CP(id){
+const r=G.rows.find(x=>x.id===id);if(!r)return;
 const pt=document.querySelector(‘input[name=“pt”]:checked’)?.value||‘ech’;
-const cpO=d.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
+const co=r.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
 const today=new Date().toISOString().split(‘T’)[0];
 let u={last_paid_date:today};
-if(pt===‘tot’){
-u.pays=d.total_inst;
-if(cpO)u.rembourse=true;
-} else {
-u.pays=d.pays+1;
-u.due=nextMonth(d.due); // ← passage automatique au mois suivant
-if(d.partage) u.rembourse=cpO?true:false;
-}
-await sb.from(‘echeances’).update(u).eq(‘id’,id);
-await loadData();S.payId=null;render();
-toast(’Payé ✓ — Prochaine éch. : ’+fd(u.due||d.due));
+if(pt===‘tot’){u.pays=r.total_inst;if(co)u.rembourse=true;}
+else{u.pays=r.pays+1;u.due=addM(r.due);if(r.partage)u.rembourse=co?true:false;}
+await SB.from(‘echeances’).update(u).eq(‘id’,id);
+await LD();G.pid=null;render();T(’Payé ✓ — Prochaine : ’+fd(u.due||r.due));
 }
 
-async function savePin(){
+async function SPC(){
 const v=document.getElementById(‘np’).value.trim();
 if(!/^\d{4}$/.test(v)){alert(‘4 chiffres requis’);return;}
-await sb.from(‘app_config’).upsert({key:‘pin’,value:v});
-cp=v;S.pinModal=false;render();toast(‘PIN mis à jour ✓’);
+await SB.from(‘app_config’).upsert({key:‘pin’,value:v});
+pc=v;G.pm=false;render();T(‘PIN mis à jour ✓’);
 }
 
-function toast(msg){const t=document.createElement(‘div’);t.className=‘toast’;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
-async function init(){await loadData();render();}
-// Précharger le PIN dès le départ pour que ce soit prêt
-loadPin();
+function T(msg){const t=document.createElement(‘div’);t.className=‘toast’;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+async function AI(){await LD();render();}
 </script>
 
 </body>
