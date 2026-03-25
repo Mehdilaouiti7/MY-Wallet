@@ -894,47 +894,7 @@ function drawChart(){
       responsive:true,
       plugins:{
         legend:{labels:{color:tc,font:{size:11},boxWidth:12}},
-        tooltip:{
-          position:'nearest',
-          intersect:false,
-          callbacks:{
-            title: items => items[0].label,
-            label: ctx => {
-              const v = ctx.parsed.y;
-              return ` ${ctx.dataset.label} : ${v.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`;
-            },
-            afterBody: items => {
-              const slot = months[items[0].dataIndex];
-              if(!slot) return [];
-              const dsLabel = items[0].dataset.label;
-              const lines = ['─────────────────'];
- 
-              if(dsLabel.includes('Moi') && fa==='moi_p'){
-                // Moi seul
-                slot.itemsMoi.forEach(i=>lines.push(` 👤 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-                // Ma part des partagés avec 💛
-                if(slot.itemsPar.length){
-                  lines.push('  — partagés —');
-                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-                }
-              } else if(dsLabel.includes('Copine') && fa==='cop_p'){
-                slot.itemsCop.forEach(i=>lines.push(` 💑 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-                if(slot.itemsPar.length){
-                  lines.push('  — partagés —');
-                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.copPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-                }
-              } else if(dsLabel.includes('Moi')){
-                slot.itemsMoi.forEach(i=>lines.push(` 👤 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-              } else if(dsLabel.includes('Copine')){
-                slot.itemsCop.forEach(i=>lines.push(` 💑 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
-              } else if(dsLabel.includes('Partagé')){
-                slot.itemsPar.forEach(i=>lines.push(` 🤝 ${i.n} : ${i.total.toLocaleString('fr-FR',{minimumFractionDigits:2})} € (moi: ${i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} / elle: ${i.copPart.toLocaleString('fr-FR',{minimumFractionDigits:2})})`));
-              }
-              return lines;
-            }
-          },
-          displayColors:true
-        }
+        tooltip:{enabled:false}
       },
       interaction:{mode:'index',intersect:false},
       scales:{
@@ -958,7 +918,7 @@ function drawChart(){
       slot.itemsMoi.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
     }
     if(fa2==='moi_p' && slot.itemsPar.length){
-      html += '<div style="font-weight:600;color:#185FA5;margin-top:6px;margin-bottom:3px">💛 Partagés</div>';
+      html += '<div style="font-weight:600;color:#185FA5;margin-top:6px;margin-bottom:3px">💛 Partagés (ma part)</div>';
       slot.itemsPar.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
     }
     if(['tous','cop_s','cop_p'].includes(fa2) && slot.itemsCop.length){
