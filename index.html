@@ -166,11 +166,6 @@ tr:hover td{background:var(--bg);cursor:pointer}
       <button class="pin-btn" data-k="0">0</button>
       <button class="pin-btn" data-k="del">⌫</button>
     </div>
-    <!-- Bouton changer photo de fond -->
-    <label style="margin-top:8px;cursor:pointer;color:rgba(255,255,255,0.5);font-size:11px;display:flex;align-items:center;gap:5px;touch-action:manipulation">
-      <span>🖼</span> Changer la photo de fond
-      <input type="file" accept="image/*" id="bg-upload" style="display:none" onchange="uploadBg(this)">
-    </label>
   </div>
 </div>
 <div id="app"></div>
@@ -245,7 +240,7 @@ async function PC(){
 }
 
 // STATE
-let G={rows:[],tab:'all',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false};
+let G={rows:[],tab:'all',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false};
 
 async function LD(){
   const {data,error}=await SB.from('echeances').select('*').order('due');
@@ -365,30 +360,40 @@ function MB(off){
   const d=GMD(now.getFullYear(),now.getMonth()+off);
   const tm=d.mi.reduce((s,i)=>s+i.m,0);
   const tc=d.co.reduce((s,i)=>s+i.m,0);
-  // Total partage = somme des items partagés (côté Moi seulement pour éviter doublon)
-  const tpartage=d.mi.filter(i=>i.p).reduce((s,i)=>s+i.m,0)+d.co.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
-  // Total global = Moi solo + Copine solo + Partagé total (sans doublon)
+  const tpMoi=d.mi.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
+  const tpCop=d.co.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
+  const tpartage=tpMoi+tpCop;
   const tglobal=d.mi.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+d.co.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+tpartage;
   const bc=off===0?'var(--border)':'#c7d2fe';
   const bg=off===0?'var(--card)':'var(--card-next)';
   const tc2=off===0?'var(--text)':'#4338ca';
-  return`<div class="mbox" style="border-color:${bc};background:${bg}">
-    <div class="mbox-t" style="color:${tc2}">📅 ${mn(off)}</div>
-    <div class="mcols">
-      <div><h3 class="c-blue">👤 Moi</h3>
-        ${d.mi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':d.mi.map(i=>`<div class="mitem"><span style="color:var(--text2)">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span class="c-blue" style="font-weight:600">${f(i.m)}</span></div>`).join('')}
-        ${d.mi.length>0?`<div class="mtotal"><span>Total moi</span><span class="c-blue">${f(tm)}</span></div>`:''}
-      </div>
-      <div><h3 class="c-amber">💑 Copine</h3>
-        ${d.co.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':d.co.map(i=>`<div class="mitem"><span style="color:var(--text2)">${i.n}${i.p?' <small style="color:#27500A">(partage)</small>':''}</span><span class="c-amber" style="font-weight:600">${f(i.m)}</span></div>`).join('')}
-        ${d.co.length>0?`<div class="mtotal"><span>Total copine</span><span class="c-amber">${f(tc)}</span></div>`:''}
-      </div>
-    </div>
-    ${tglobal>0?`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap;gap:6px">
-      ${tpartage>0?`<span style="font-size:12px;color:var(--text2)">🤝 Partage total : <strong style="color:#27500A">${f(tpartage)}</strong></span>`:''}
-      <span style="font-size:13px;font-weight:700;color:var(--text)">💰 Total global : ${f(tglobal)}</span>
-    </div>`:''}
-  </div>`;
+  return'<div class="mbox" style="border-color:'+bc+';background:'+bg+'">'+
+    '<div class="mbox-t" style="color:'+tc2+'">\u{1F4C5} '+mn(off)+'</div>'+
+    '<div class="mcols">'+
+    '<div><h3 class="c-blue">\u{1F464} Moi</h3>'+
+    (d.mi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':
+      d.mi.map(i=>'<div class="mitem"><span style="color:var(--text2)">'+i.n+(i.p?' <small style="color:#27500A">(partage)</small>':'')+ '</span><span class="c-blue" style="font-weight:600">'+f(i.m)+'</span></div>').join(''))+
+    (d.mi.length>0?'<div class="mtotal"><span>Total moi</span><span class="c-blue">'+f(tm)+'</span></div>':'')+
+    '</div>'+
+    '<div><h3 class="c-amber">\u{1F491} Copine</h3>'+
+    (d.co.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':
+      d.co.map(i=>'<div class="mitem"><span style="color:var(--text2)">'+i.n+(i.p?' <small style="color:#27500A">(partage)</small>':'')+ '</span><span class="c-amber" style="font-weight:600">'+f(i.m)+'</span></div>').join(''))+
+    (d.co.length>0?'<div class="mtotal"><span>Total copine</span><span class="c-amber">'+f(tc)+'</span></div>':'')+
+    '</div></div>'+
+    (tglobal>0?
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'+
+      (tpartage>0?
+        '<div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px">'+
+        '<div style="font-size:11px;font-weight:600;color:#27500A;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">\u{1F91D} Achats partag\u00e9s</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Ma part</span><span style="font-weight:600;color:#185FA5">'+f(tpMoi)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Part copine</span><span style="font-weight:600;color:#854F0B">'+f(tpCop)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding-top:4px;margin-top:2px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Total partag\u00e9</span><span style="font-weight:700;color:#27500A">'+f(tpartage)+'</span></div>'+
+        '</div>'
+      :'')+
+      '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span style="color:var(--text)">\u{1F4B0} Total global</span><span style="color:var(--text)">'+f(tglobal)+'</span></div>'+
+      '</div>'
+    :'')+
+    '</div>';
 }
 
 function render(){
@@ -402,7 +407,7 @@ function render(){
   const nSo=G.rows.filter(r=>calc(r).st==='soldé').length;
 
   document.getElementById('app').innerHTML=`
-<div class="topbar"><h1>MY <span>Wallet</span> 💛</h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn" onclick="toggleDark()" id="dark-btn">🌙</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
+<div class="topbar"><h1>MY <span>Wallet</span> 💛</h1><div class="topbar-r"><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
   <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
@@ -490,7 +495,7 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 </tr>`;}).join('')}
 </tbody></table>`}
 </div>
-${G.eid!==null?EM():''}${G.pid?PM():''}${G.pm?PiM():''}`;
+${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}`;
   setTimeout(drawChart, 50);
 }
 
@@ -591,11 +596,44 @@ function UPS(){
   document.getElementById('ps').innerHTML=h;
 }
 
-function PiM(){return`<div class="overlay" onclick="if(event.target===this){G.pm=false;render()}"><div class="modal">
-  <h2>🔑 Changer le code PIN</h2>
-  <div class="fg"><div class="fr full"><label>Nouveau PIN (4 chiffres)</label><input id="np" type="tel" maxlength="4" placeholder="Ex: 5678"></div></div>
-  <div class="macts"><button class="btn" onclick="G.pm=false;render()">Annuler</button><button class="btn btn-p" onclick="SPC()">Enregistrer</button></div>
-</div></div>`;}
+function SM(){
+  return`<div class="overlay" onclick="if(event.target===this){G.sm=false;render()}"><div class="modal">
+    <h2>⚙️ Réglages</h2>
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Apparence</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:var(--text)">🌙 Mode sombre</span>
+          <button onclick="toggleDark()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:${isDark?'#185FA5':'var(--card)'};color:${isDark?'#fff':'var(--text)'};font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+            ${isDark?'Activé ✓':'Désactivé'}
+          </button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Photo de fond (écran PIN)</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;touch-action:manipulation;white-space:nowrap">
+            🖼 Choisir une photo
+            <input type="file" accept="image/*" style="display:none" onchange="uploadBg(this)">
+          </label>
+          <button onclick="removeBg()" style="padding:7px 14px;border-radius:8px;border:1px solid #F09595;color:#A32D2D;background:var(--card);font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">Supprimer</button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Code PIN</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="np" type="tel" maxlength="4" placeholder="Nouveau PIN (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer le PIN</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="macts"><button class="btn" onclick="G.sm=false;render()">Fermer</button></div>
+  </div></div>`;
+}
 
 function OE(id){G.eid=id||'new';render();}
 function OP(id){G.pid=id;render();setTimeout(UPS,50);}
@@ -706,7 +744,7 @@ function toggleDark(){
   isDark = !isDark;
   localStorage.setItem('dark', isDark ? '1' : '0');
   applyDark();
-  // Redessiner le graphique avec les bonnes couleurs
+  if(G.sm) render(); // re-render pour mettre à jour le bouton dans les réglages
   setTimeout(drawChart, 50);
 }
 applyDark();
@@ -760,6 +798,13 @@ function drawChart(){
       }
     }
   });
+}
+
+async function removeBg(){
+  await SB.from('app_config').upsert({key:'bg_photo',value:''});
+  const ps=document.getElementById('pin-screen');
+  if(ps){ps.style.backgroundImage='';const ov=document.getElementById('pin-overlay');if(ov)ov.style.display='none';}
+  T('Photo supprimée');
 }
 
 async function AI(){await LD();render();setTimeout(drawChart, 100);}
