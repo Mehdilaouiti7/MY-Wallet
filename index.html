@@ -287,7 +287,7 @@ const nSo=G.rows.filter(r=>calc(r).st===‘soldé’).length;
 
 document.getElementById(‘app’).innerHTML=`
 
-<div class="topbar"><h1>Mes <span>échéances</span></h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
+<div class="topbar"><h1>MY - <span>échéances</span></h1><div class="topbar-r"><button class="btn" onclick="G.pm=true;render()">🔑 PIN</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
   <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
