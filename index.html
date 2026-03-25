@@ -912,13 +912,13 @@ function drawChart(){
                 // Ma part des partagés avec 💛
                 if(slot.itemsPar.length){
                   lines.push('  — partagés —');
-                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} € (ma part)`));
+                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
                 }
               } else if(dsLabel.includes('Copine') && fa==='cop_p'){
                 slot.itemsCop.forEach(i=>lines.push(` 💑 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
                 if(slot.itemsPar.length){
                   lines.push('  — partagés —');
-                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.copPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} € (sa part)`));
+                  slot.itemsPar.forEach(i=>lines.push(` 💛 ${i.n} : ${i.copPart.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
                 }
               } else if(dsLabel.includes('Moi')){
                 slot.itemsMoi.forEach(i=>lines.push(` 👤 ${i.n} : ${i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})} €`));
