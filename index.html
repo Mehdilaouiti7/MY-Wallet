@@ -94,9 +94,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pfill{height:100%;border-radius:4px}
 .ca{display:flex;gap:5px;flex-wrap:wrap}
 .twrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);background:var(--card)}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:var(--bg);padding:8px 10px;text-align:left;font-weight:600;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase}
-td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg);padding:6px 8px;text-align:left;font-weight:600;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:var(--bg);cursor:pointer}
 .badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
@@ -678,9 +678,9 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr>
 ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';return`<tr onclick="OE('${r.id}')">
   <td><div style="font-weight:500">${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
   <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
-  <td style="font-weight:600">${f(c.cv)}</td><td style="font-weight:600;color:#276749">${f(c.deja)}</td><td>${f(c.total)}</td>
+  <td style="font-weight:600;white-space:nowrap">${f(c.cv)}</td><td style="font-weight:600;color:#276749;white-space:nowrap">${f(c.deja)}</td><td style="white-space:nowrap">${f(c.total)}</td>
   <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
-  <td style="font-weight:600" class="${c.restant>0?'c-red':'c-green'}">${f(c.restant)}</td>
+  <td style="font-weight:600;white-space:nowrap" class="${c.restant>0?'c-red':'c-green'}">${f(c.restant)}</td>
   <td style="white-space:nowrap">${fdf(r.due)}</td><td>${JT(c.j)}</td><td>${SB2(c.st)}</td>
   <td>${r.partage?`<button class="remb ${r.rembourse?'remb-o':'remb-n'}" onclick="event.stopPropagation();TR('${r.id}',${r.rembourse})">${r.rembourse?'✓':'⏳'}</button>`:'—'}</td>
   <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px"><button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓':'💳'}</button><button class="btn btn-sm btn-d" onclick="DR('${r.id}')">✕</button></div></td>
