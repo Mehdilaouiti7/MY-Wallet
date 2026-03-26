@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -178,238 +177,237 @@ const SB = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZnl1cHJwenRpeWZwbGVhbm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjg3MjUsImV4cCI6MjA4OTkwNDcyNX0.4Fvc-fNlwhVp0HvOEL-Z92i9W4YvVSAgen0ihBzlGOk'
 );
 const SRC=['PayPal','Oney','Cofidis','Carte bancaire','Virement','Prélèvement','Autre'];
-
+ 
 // PIN
-let pv=’’, pc=‘0000’;
+let pv='', pc='0000';
 // Charger PIN et photo de fond au démarrage
 (async()=>{
-const {data}=await SB.from(‘app_config’).select(‘key,value’).in(‘key’,[‘pin’,‘bg_photo’]);
-if(data){
-const pin=data.find(d=>d.key===‘pin’);
-const bg=data.find(d=>d.key===‘bg_photo’);
-if(pin&&pin.value) pc=pin.value;
-if(bg&&bg.value) applyBg(bg.value);
-}
+  const {data}=await SB.from('app_config').select('key,value').in('key',['pin','bg_photo']);
+  if(data){
+    const pin=data.find(d=>d.key==='pin');
+    const bg=data.find(d=>d.key==='bg_photo');
+    if(pin&&pin.value) pc=pin.value;
+    if(bg&&bg.value) applyBg(bg.value);
+  }
 })();
-
+ 
 function applyBg(dataUrl){
-if(!dataUrl) return;
-const ps=document.getElementById(‘pin-screen’);
-if(ps){
-ps.style.backgroundImage=`url(${dataUrl})`;
-ps.style.backgroundSize=‘cover’;
-ps.style.backgroundPosition=‘center’;
-// Overlay sombre pour garder la lisibilité
-ps.style.backgroundColor=‘transparent’;
-const overlay=document.getElementById(‘pin-overlay’);
-if(overlay) overlay.style.display=‘flex’;
+  if(!dataUrl) return;
+  const ps=document.getElementById('pin-screen');
+  if(ps){
+    ps.style.backgroundImage=`url(${dataUrl})`;
+    ps.style.backgroundSize='cover';
+    ps.style.backgroundPosition='center';
+    // Overlay sombre pour garder la lisibilité
+    ps.style.backgroundColor='transparent';
+    const overlay=document.getElementById('pin-overlay');
+    if(overlay) overlay.style.display='flex';
+  }
 }
-}
-
+ 
 function PK(n){if(pv.length>=4)return;pv+=n;PR();if(pv.length===4)setTimeout(PC,100);}
-function PD(){pv=pv.slice(0,-1);PR();document.getElementById(‘pin-err’).textContent=’’;}
-
+function PD(){pv=pv.slice(0,-1);PR();document.getElementById('pin-err').textContent='';}
+ 
 // iOS Safari fix: use touchstart + preventDefault to avoid 300ms delay and ghost clicks
-document.addEventListener(‘DOMContentLoaded’, function() {
-const pad = document.getElementById(‘pin-pad’);
-if (!pad) return;
-function handlePin(e) {
-const btn = e.target.closest(’[data-k]’);
-if (!btn) return;
-e.preventDefault();
-e.stopPropagation();
-const k = btn.getAttribute(‘data-k’);
-if (k === ‘del’) PD();
-else PK(k);
-btn.style.background = ‘rgba(255,255,255,.3)’;
-setTimeout(() => btn.style.background = ‘’, 150);
-}
-pad.addEventListener(‘touchstart’, handlePin, {passive: false});
-pad.addEventListener(‘click’, handlePin);
+document.addEventListener('DOMContentLoaded', function() {
+  const pad = document.getElementById('pin-pad');
+  if (!pad) return;
+  function handlePin(e) {
+    const btn = e.target.closest('[data-k]');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const k = btn.getAttribute('data-k');
+    if (k === 'del') PD();
+    else PK(k);
+    btn.style.background = 'rgba(255,255,255,.3)';
+    setTimeout(() => btn.style.background = '', 150);
+  }
+  pad.addEventListener('touchstart', handlePin, {passive: false});
+  pad.addEventListener('click', handlePin);
 });
-function PR(){for(let i=0;i<4;i++)document.getElementById(‘pd’+i).className=‘pin-dot’+(i<pv.length?’ on’:’’);}
+function PR(){for(let i=0;i<4;i++)document.getElementById('pd'+i).className='pin-dot'+(i<pv.length?' on':'');}
 async function PC(){
-const {data}=await SB.from(‘app_config’).select(‘value’).eq(‘key’,‘pin’).single();
-if(data&&data.value)pc=data.value;
-if(pv===pc){
-document.getElementById(‘pin-screen’).style.display=‘none’;
-document.getElementById(‘app’).style.display=‘block’;
-AI();
-}else{
-document.getElementById(‘pin-err’).textContent=‘Code incorrect’;
-pv=’’;PR();
+  const {data}=await SB.from('app_config').select('value').eq('key','pin').single();
+  if(data&&data.value)pc=data.value;
+  if(pv===pc){
+    document.getElementById('pin-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    AI();
+  }else{
+    document.getElementById('pin-err').textContent='Code incorrect';
+    pv='';PR();
+  }
 }
-}
-
+ 
 // STATE
-let G={rows:[],tab:‘all’,fa:‘tous’,fs:‘tous’,fq:’’,tri:‘date’,eid:null,pid:null,pm:false,sm:false,sf:false,cfa:‘tous’};
-
+let G={rows:[],tab:'all',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous'};
+ 
 async function LD(){
-const {data,error}=await SB.from(‘echeances’).select(’*’).order(‘due’);
-if(error){T(’Erreur: ’+error.message);return;}
-G.rows=data||[];
+  const {data,error}=await SB.from('echeances').select('*').order('due');
+  if(error){T('Erreur: '+error.message);return;}
+  G.rows=data||[];
 }
-
-function f(n){return Number(n).toLocaleString(‘fr-FR’,{minimumFractionDigits:2,maximumFractionDigits:2})+’ €’;}
-function addM(s){const d=new Date(s+‘T12:00:00’);d.setMonth(d.getMonth()+1);return d.toISOString().split(‘T’)[0];}
-function fd(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’});}
-function fdf(s){return new Date(s+‘T12:00:00’).toLocaleDateString(‘fr-FR’,{day:‘2-digit’,month:‘short’,year:‘numeric’});}
-function mn(off=0){const d=new Date();if(off)d.setMonth(d.getMonth()+off);return d.toLocaleDateString(‘fr-FR’,{month:‘long’,year:‘numeric’});}
-
+ 
+function f(n){return Number(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
+function addM(s){const d=new Date(s+'T12:00:00');d.setMonth(d.getMonth()+1);return d.toISOString().split('T')[0];}
+function fd(s){return new Date(s+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});}
+function fdf(s){return new Date(s+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}
+function mn(off=0){const d=new Date();if(off)d.setMonth(d.getMonth()+off);return d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});}
+ 
 function gv(r,i){
-// Si perso et données disponibles, utiliser le montant perso
-if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso[i]&&parseFloat(r.versements_perso[i].montant))
-return parseFloat(r.versements_perso[i].montant);
-// Sinon fallback sur versement égal
-return parseFloat(r.versement)||0;
+  // Si perso et données disponibles, utiliser le montant perso
+  if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso[i]&&parseFloat(r.versements_perso[i].montant))
+    return parseFloat(r.versements_perso[i].montant);
+  // Sinon fallback sur versement égal
+  return parseFloat(r.versement)||0;
 }
 function gc(r,i){
-if(!r.partage)return 0;
-const v=gv(r,i);
-if(r.partage_type===‘perso’&&r.versements_perso&&r.versements_perso[i]&&parseFloat(r.versements_perso[i].copine_montant))
-return parseFloat(r.versements_perso[i].copine_montant);
-return v/2;
+  if(!r.partage)return 0;
+  const v=gv(r,i);
+  if(r.partage_type==='perso'&&r.versements_perso&&r.versements_perso[i]&&parseFloat(r.versements_perso[i].copine_montant))
+    return parseFloat(r.versements_perso[i].copine_montant);
+  return v/2;
 }
 function calc(r){
-const rest=r.total_inst-r.pays;
-let total=0,deja=0,restant=0,pc2=0;
-if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso.length){
-for(let i=0;i<r.total_inst;i++){const v=gv(r,i);total+=v;if(i<r.pays)deja+=v;else{restant+=v;if(r.partage&&!r.rembourse)pc2+=gc(r,i);}}
-}else{
-const v=parseFloat(r.versement)||0;
-total=parseFloat(r.montant_total)||v*r.total_inst;
-deja=v*r.pays;restant=v*rest;
-if(r.partage&&!r.rembourse){
-if(r.partage_type===‘perso’&&r.versements_perso){for(let i=r.pays;i<r.total_inst;i++)pc2+=gc(r,i);}
-else pc2=restant/2;
+  const rest=r.total_inst-r.pays;
+  let total=0,deja=0,restant=0,pc2=0;
+  if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso.length){
+    for(let i=0;i<r.total_inst;i++){const v=gv(r,i);total+=v;if(i<r.pays)deja+=v;else{restant+=v;if(r.partage&&!r.rembourse)pc2+=gc(r,i);}}
+  }else{
+    const v=parseFloat(r.versement)||0;
+    total=parseFloat(r.montant_total)||v*r.total_inst;
+    deja=v*r.pays;restant=v*rest;
+    if(r.partage&&!r.rembourse){
+      if(r.partage_type==='perso'&&r.versements_perso){for(let i=r.pays;i<r.total_inst;i++)pc2+=gc(r,i);}
+      else pc2=restant/2;
+    }
+  }
+  const today=new Date();today.setHours(0,0,0,0);
+  const due=new Date(r.due+'T12:00:00');
+  const j=Math.round((due-today)/86400000);
+  const st=rest===0?'soldé':j<0?'retard':j<=7?'urgent':'ok';
+  const lp=r.last_paid_date?new Date(r.last_paid_date+'T12:00:00'):null;
+  const nk=new Date().getMonth()+'-'+new Date().getFullYear();
+  const lk=lp?(lp.getMonth()+'-'+lp.getFullYear()):'';
+  const pd2=(lk===nk)||rest===0;
+  return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,cv:gv(r,r.pays),cc:gc(r,r.pays)};
 }
-}
-const today=new Date();today.setHours(0,0,0,0);
-const due=new Date(r.due+‘T12:00:00’);
-const j=Math.round((due-today)/86400000);
-const st=rest===0?‘soldé’:j<0?‘retard’:j<=7?‘urgent’:‘ok’;
-const lp=r.last_paid_date?new Date(r.last_paid_date+‘T12:00:00’):null;
-const nk=new Date().getMonth()+’-’+new Date().getFullYear();
-const lk=lp?(lp.getMonth()+’-’+lp.getFullYear()):’’;
-const pd2=(lk===nk)||rest===0;
-return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,cv:gv(r,r.pays),cc:gc(r,r.pays)};
-}
-
+ 
 function GMD(y,m){
-const s=new Date(y,m,1,0,0,0);
-const e=new Date(y,m+1,0,23,59,59); // fin du dernier jour du mois
-const mi=[],co=[];
-G.rows.forEach(r=>{
-const c=calc(r);if(c.st===‘soldé’)return;
-const due=new Date(r.due+‘T12:00:00’);
-if(due>=s&&due<=e){
-if(r.acheteur===‘Moi’||r.partage)mi.push({n:r.marchand,m:r.partage?c.cv-c.cc:c.cv,p:r.partage});
-if(r.acheteur===‘Copine’||r.partage)co.push({n:r.marchand,m:r.partage?c.cc:c.cv,p:r.partage});
+  const s=new Date(y,m,1,0,0,0);
+  const e=new Date(y,m+1,0,23,59,59); // fin du dernier jour du mois
+  const mi=[],co=[];
+  G.rows.forEach(r=>{
+    const c=calc(r);if(c.st==='soldé')return;
+    const due=new Date(r.due+'T12:00:00');
+    if(due>=s&&due<=e){
+      if(r.acheteur==='Moi'||r.partage)mi.push({n:r.marchand,m:r.partage?c.cv-c.cc:c.cv,p:r.partage});
+      if(r.acheteur==='Copine'||r.partage)co.push({n:r.marchand,m:r.partage?c.cc:c.cv,p:r.partage});
+    }
+  });
+  return{mi,co};
 }
-});
-return{mi,co};
-}
-
+ 
 function filtered(){
-const t=new Date();t.setHours(0,0,0,0);
-return G.rows.filter(r=>{
-const c=calc(r);const due=new Date(r.due+‘T12:00:00’);
-if(G.tab===‘all’&&c.st===‘soldé’)return false;
-if(G.tab===‘upcoming’&&(c.st===‘soldé’||(due<t&&c.st!==‘retard’)))return false;
-if(G.tab===‘past’&&c.st!==‘soldé’)return false;
-if(G.fa===‘moi_all’&&!(r.acheteur===‘Moi’||r.partage))return false;
-if(G.fa===‘moi_solo’&&!(r.acheteur===‘Moi’&&!r.partage))return false;
-if(G.fa===‘cop_all’&&!(r.acheteur===‘Copine’||r.partage))return false;
-if(G.fa===‘cop_solo’&&!(r.acheteur===‘Copine’&&!r.partage))return false;
-if(G.fa===‘partage’&&!r.partage)return false;
-if(G.fs!==‘tous’&&r.source!==G.fs)return false;
-if(G.fq&&!r.marchand.toLowerCase().includes(G.fq.toLowerCase())&&!(r.notes||’’).toLowerCase().includes(G.fq.toLowerCase()))return false;
-return true;
-}).sort((a,b)=>{
-const ca=calc(a),cb=calc(b);
-switch(G.tri){
-case ‘date’:    return new Date(a.due)-new Date(b.due);
-case ‘montant’: return cb.restant-ca.restant;
-case ‘alpha’:   return a.marchand.localeCompare(b.marchand,‘fr’);
-case ‘statut’: {
-const o={retard:0,urgent:1,ok:2,soldé:3};
-return (o[ca.st]??2)-(o[cb.st]??2);
+  const t=new Date();t.setHours(0,0,0,0);
+  return G.rows.filter(r=>{
+    const c=calc(r);const due=new Date(r.due+'T12:00:00');
+    if(G.tab==='all'&&c.st==='soldé')return false;
+    if(G.tab==='upcoming'&&(c.st==='soldé'||(due<t&&c.st!=='retard')))return false;
+    if(G.tab==='past'&&c.st!=='soldé')return false;
+    if(G.fa==='moi_all'&&!(r.acheteur==='Moi'||r.partage))return false;
+    if(G.fa==='moi_solo'&&!(r.acheteur==='Moi'&&!r.partage))return false;
+    if(G.fa==='cop_all'&&!(r.acheteur==='Copine'||r.partage))return false;
+    if(G.fa==='cop_solo'&&!(r.acheteur==='Copine'&&!r.partage))return false;
+    if(G.fa==='partage'&&!r.partage)return false;
+    if(G.fs!=='tous'&&r.source!==G.fs)return false;
+    if(G.fq&&!r.marchand.toLowerCase().includes(G.fq.toLowerCase())&&!(r.notes||'').toLowerCase().includes(G.fq.toLowerCase()))return false;
+    return true;
+  }).sort((a,b)=>{
+    const ca=calc(a),cb=calc(b);
+    switch(G.tri){
+      case 'date':    return new Date(a.due)-new Date(b.due);
+      case 'montant': return cb.restant-ca.restant;
+      case 'alpha':   return a.marchand.localeCompare(b.marchand,'fr');
+      case 'statut': {
+        const o={retard:0,urgent:1,ok:2,soldé:3};
+        return (o[ca.st]??2)-(o[cb.st]??2);
+      }
+      case 'acheteur': {
+        const o2={Moi:0,partage:1,Copine:2};
+        const ka=a.partage?'partage':a.acheteur;
+        const kb=b.partage?'partage':b.acheteur;
+        return (o2[ka]??1)-(o2[kb]??1);
+      }
+      case 'recent':  return new Date(b.created_at||0)-new Date(a.created_at||0);
+      default:        return new Date(a.due)-new Date(b.due);
+    }
+  });
 }
-case ‘acheteur’: {
-const o2={Moi:0,partage:1,Copine:2};
-const ka=a.partage?‘partage’:a.acheteur;
-const kb=b.partage?‘partage’:b.acheteur;
-return (o2[ka]??1)-(o2[kb]??1);
-}
-case ‘recent’:  return new Date(b.created_at||0)-new Date(a.created_at||0);
-default:        return new Date(a.due)-new Date(b.due);
-}
-});
-}
-
+ 
 function kpis(){
-let te=0,tr=0,tp=0,mr=0,cr=0;
-G.rows.forEach(r=>{const c=calc(r);te+=c.total;tr+=c.restant;if(r.partage)tp+=c.pc;if(r.acheteur===‘Moi’)mr+=r.partage?c.restant-c.pc:c.restant;if(r.acheteur===‘Copine’)cr+=c.restant;});
-return{te,tr,tp,mr,cr};
+  let te=0,tr=0,tp=0,mr=0,cr=0;
+  G.rows.forEach(r=>{const c=calc(r);te+=c.total;tr+=c.restant;if(r.partage)tp+=c.pc;if(r.acheteur==='Moi')mr+=r.partage?c.restant-c.pc:c.restant;if(r.acheteur==='Copine')cr+=c.restant;});
+  return{te,tr,tp,mr,cr};
 }
-
-function SB2(s){const m={soldé:[‘b-don’,‘Soldé’],retard:[‘b-lat’,‘Retard’],urgent:[‘b-urg’,‘Urgent’],ok:[‘b-ok’,‘OK’]};const[cl,t]=m[s];return`<span class="badge ${cl}">${t}</span>`;}
-function AB(r){if(r.partage)return`<span class="badge b-par">${r.partage_type==='perso'?'Partagé perso':'Partagé 50/50'}</span>`;if(r.acheteur===‘Copine’)return`<span class="badge b-cop">Copine</span>`;return`<span class="badge b-moi">Moi</span>`;}
+ 
+function SB2(s){const m={soldé:['b-don','Soldé'],retard:['b-lat','Retard'],urgent:['b-urg','Urgent'],ok:['b-ok','OK']};const[cl,t]=m[s];return`<span class="badge ${cl}">${t}</span>`;}
+function AB(r){if(r.partage)return`<span class="badge b-par">${r.partage_type==='perso'?'Partagé perso':'Partagé 50/50'}</span>`;if(r.acheteur==='Copine')return`<span class="badge b-cop">Copine</span>`;return`<span class="badge b-moi">Moi</span>`;}
 function JT(j){if(j<0)return`<span class="c-red" style="font-weight:700">${Math.abs(j)}j</span>`;if(j===0)return`<span style="color:#D85A30;font-weight:700">Auj.</span>`;if(j<=7)return`<span style="color:#D85A30;font-weight:600">${j}j</span>`;return`<span style="color:#718096">${j}j</span>`;}
-
+ 
 function MB(off){
-const now=new Date();
-const d=GMD(now.getFullYear(),now.getMonth()+off);
-const tm=d.mi.reduce((s,i)=>s+i.m,0);
-const tc=d.co.reduce((s,i)=>s+i.m,0);
-const tpMoi=d.mi.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
-const tpCop=d.co.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
-const tpartage=tpMoi+tpCop;
-const tglobal=d.mi.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+d.co.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+tpartage;
-const bc=off===0?‘var(–border)’:’#c7d2fe’;
-const bg=off===0?‘var(–card)’:‘var(–card-next)’;
-const tc2=off===0?‘var(–text)’:’#4338ca’;
-return’<div class="mbox" style="border-color:'+bc+';background:'+bg+'">’+
-‘<div class="mbox-t" style="color:'+tc2+'">\u{1F4C5} ‘+mn(off)+’</div>’+
-‘<div class="mcols">’+
-‘<div><h3 class="c-blue">\u{1F464} Moi</h3>’+
-(d.mi.length===0?’<div style="font-size:12px;color:#a0aec0">Rien</div>’:
-d.mi.map(i=>’<div class="mitem"><span style="color:var(--text2)">’+i.n+(i.p?’ <small style="color:#27500A">(partage)</small>’:’’)+ ‘</span><span class="c-blue" style="font-weight:600">’+f(i.m)+’</span></div>’).join(’’))+
-(d.mi.length>0?’<div class="mtotal"><span>Total moi</span><span class="c-blue">’+f(tm)+’</span></div>’:’’)+
-‘</div>’+
-‘<div><h3 class="c-amber">\u{1F491} Copine</h3>’+
-(d.co.length===0?’<div style="font-size:12px;color:#a0aec0">Rien</div>’:
-d.co.map(i=>’<div class="mitem"><span style="color:var(--text2)">’+i.n+(i.p?’ <small style="color:#27500A">(partage)</small>’:’’)+ ‘</span><span class="c-amber" style="font-weight:600">’+f(i.m)+’</span></div>’).join(’’))+
-(d.co.length>0?’<div class="mtotal"><span>Total copine</span><span class="c-amber">’+f(tc)+’</span></div>’:’’)+
-‘</div></div>’+
-(tglobal>0?
-‘<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">’+
-(tpartage>0?
-‘<div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px">’+
-‘<div style="font-size:11px;font-weight:600;color:#27500A;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">\u{1F91D} Achats partag\u00e9s</div>’+
-‘<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Ma part</span><span style="font-weight:600;color:#185FA5">’+f(tpMoi)+’</span></div>’+
-‘<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Part copine</span><span style="font-weight:600;color:#854F0B">’+f(tpCop)+’</span></div>’+
-‘<div style="display:flex;justify-content:space-between;font-size:12px;padding-top:4px;margin-top:2px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Total partag\u00e9</span><span style="font-weight:700;color:#27500A">’+f(tpartage)+’</span></div>’+
-‘</div>’
-:’’)+
-‘<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span style="color:var(--text)">\u{1F4B0} Total global</span><span style="color:var(--text)">’+f(tglobal)+’</span></div>’+
-‘</div>’
-:’’)+
-‘</div>’;
+  const now=new Date();
+  const d=GMD(now.getFullYear(),now.getMonth()+off);
+  const tm=d.mi.reduce((s,i)=>s+i.m,0);
+  const tc=d.co.reduce((s,i)=>s+i.m,0);
+  const tpMoi=d.mi.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
+  const tpCop=d.co.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
+  const tpartage=tpMoi+tpCop;
+  const tglobal=d.mi.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+d.co.filter(i=>!i.p).reduce((s,i)=>s+i.m,0)+tpartage;
+  const bc=off===0?'var(--border)':'#c7d2fe';
+  const bg=off===0?'var(--card)':'var(--card-next)';
+  const tc2=off===0?'var(--text)':'#4338ca';
+  return'<div class="mbox" style="border-color:'+bc+';background:'+bg+'">'+
+    '<div class="mbox-t" style="color:'+tc2+'">\u{1F4C5} '+mn(off)+'</div>'+
+    '<div class="mcols">'+
+    '<div><h3 class="c-blue">\u{1F464} Moi</h3>'+
+    (d.mi.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':
+      d.mi.map(i=>'<div class="mitem"><span style="color:var(--text2)">'+i.n+(i.p?' <small style="color:#27500A">(partage)</small>':'')+ '</span><span class="c-blue" style="font-weight:600">'+f(i.m)+'</span></div>').join(''))+
+    (d.mi.length>0?'<div class="mtotal"><span>Total moi</span><span class="c-blue">'+f(tm)+'</span></div>':'')+
+    '</div>'+
+    '<div><h3 class="c-amber">\u{1F491} Copine</h3>'+
+    (d.co.length===0?'<div style="font-size:12px;color:#a0aec0">Rien</div>':
+      d.co.map(i=>'<div class="mitem"><span style="color:var(--text2)">'+i.n+(i.p?' <small style="color:#27500A">(partage)</small>':'')+ '</span><span class="c-amber" style="font-weight:600">'+f(i.m)+'</span></div>').join(''))+
+    (d.co.length>0?'<div class="mtotal"><span>Total copine</span><span class="c-amber">'+f(tc)+'</span></div>':'')+
+    '</div></div>'+
+    (tglobal>0?
+      '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'+
+      (tpartage>0?
+        '<div style="background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px">'+
+        '<div style="font-size:11px;font-weight:600;color:#27500A;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px">\u{1F91D} Achats partag\u00e9s</div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Ma part</span><span style="font-weight:600;color:#185FA5">'+f(tpMoi)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0"><span style="color:var(--text3)">Part copine</span><span style="font-weight:600;color:#854F0B">'+f(tpCop)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;padding-top:4px;margin-top:2px;border-top:1px solid var(--border)"><span style="color:var(--text3)">Total partag\u00e9</span><span style="font-weight:700;color:#27500A">'+f(tpartage)+'</span></div>'+
+        '</div>'
+      :'')+
+      '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700"><span style="color:var(--text)">\u{1F4B0} Total global</span><span style="color:var(--text)">'+f(tglobal)+'</span></div>'+
+      '</div>'
+    :'')+
+    '</div>';
 }
-
+ 
 function render(){
-applyDark();
-const k=kpis();
-const al=G.rows.filter(r=>{const c=calc(r);return c.st===‘urgent’||c.st===‘retard’;}).sort((a,b)=>new Date(a.due)-new Date(b.due));
-const rows=filtered();
-let sm={e:0,d:0,r:0},sc={e:0,d:0,r:0},sp={e:0,d:0,r:0,a:0};
-G.rows.forEach(r=>{const c=calc(r);if(r.partage){sp.e+=c.total;sp.d+=c.deja;sp.r+=c.restant;sp.a+=c.pc;}else if(r.acheteur===‘Moi’){sm.e+=c.total;sm.d+=c.deja;sm.r+=c.restant;}else{sc.e+=c.total;sc.d+=c.deja;sc.r+=c.restant;}});
-const nEn=G.rows.filter(r=>calc(r).st!==‘soldé’).length;
-const nSo=G.rows.filter(r=>calc(r).st===‘soldé’).length;
-
-document.getElementById(‘app’).innerHTML=`
-
+  applyDark();
+  const k=kpis();
+  const al=G.rows.filter(r=>{const c=calc(r);return c.st==='urgent'||c.st==='retard';}).sort((a,b)=>new Date(a.due)-new Date(b.due));
+  const rows=filtered();
+  let sm={e:0,d:0,r:0},sc={e:0,d:0,r:0},sp={e:0,d:0,r:0,a:0};
+  G.rows.forEach(r=>{const c=calc(r);if(r.partage){sp.e+=c.total;sp.d+=c.deja;sp.r+=c.restant;sp.a+=c.pc;}else if(r.acheteur==='Moi'){sm.e+=c.total;sm.d+=c.deja;sm.r+=c.restant;}else{sc.e+=c.total;sc.d+=c.deja;sc.r+=c.restant;}});
+  const nEn=G.rows.filter(r=>calc(r).st!=='soldé').length;
+  const nSo=G.rows.filter(r=>calc(r).st==='soldé').length;
+ 
+  document.getElementById('app').innerHTML=`
 <div class="topbar"><h1>MY <span>Wallet</span> 💛</h1><div class="topbar-r"><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
@@ -515,17 +513,19 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 ${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}`;
   setTimeout(drawChart, 50);
 }
-
+ 
 function EM(){
-const isN=G.eid===‘new’;
-const r=isN?{marchand:’’,versement:’’,montant_total:’’,pays:0,total_inst:4,due:’’,acheteur:‘Moi’,partage:false,partage_type:‘50/50’,versement_type:‘egal’,versements_perso:null,source:‘Carte bancaire’,notes:’’}:G.rows.find(x=>x.id===G.eid);
-if(!r)return’’;
-const vt=r.versement_type||‘egal’;const pt=r.partage_type||‘50/50’;const nb=parseInt(r.total_inst)||4;
-const sc2=r.partage&&pt===‘perso’;
-const vph=vt===‘perso’?`<div style="background:#f7fafc;border-radius:10px;padding:.75rem;margin-top:4px"> <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px">Saisir chaque versement${sc2?' et la part copine':''}</div> <table class="vpt"><thead><tr><th>#</th><th>Montant (€)</th>${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody> ${Array.from({length:nb},(_,i)=>{const vp=(r.versements_perso&&r.versements_perso[i])||{};return`<tr><td style="color:#718096;font-weight:600">${i+1}</td><td><input type="number" step="0.01" id="vpm_${i}" value="${vp.montant||''}" placeholder="0.00" oninput="CVT()"></td>${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" value="${vp.copine_montant||''}" placeholder="0.00"></td>`:’’}</tr>`;}).join(’’)}
-</tbody></table>
-<div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>
-
+  const isN=G.eid==='new';
+  const r=isN?{marchand:'',versement:'',montant_total:'',pays:0,total_inst:4,due:'',acheteur:'Moi',partage:false,partage_type:'50/50',versement_type:'egal',versements_perso:null,source:'Carte bancaire',notes:''}:G.rows.find(x=>x.id===G.eid);
+  if(!r)return'';
+  const vt=r.versement_type||'egal';const pt=r.partage_type||'50/50';const nb=parseInt(r.total_inst)||4;
+  const sc2=r.partage&&pt==='perso';
+  const vph=vt==='perso'?`<div style="background:#f7fafc;border-radius:10px;padding:.75rem;margin-top:4px">
+    <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px">Saisir chaque versement${sc2?' et la part copine':''}</div>
+    <table class="vpt"><thead><tr><th>#</th><th>Montant (€)</th>${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody>
+    ${Array.from({length:nb},(_,i)=>{const vp=(r.versements_perso&&r.versements_perso[i])||{};return`<tr><td style="color:#718096;font-weight:600">${i+1}</td><td><input type="number" step="0.01" id="vpm_${i}" value="${vp.montant||''}" placeholder="0.00" oninput="CVT()"></td>${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" value="${vp.copine_montant||''}" placeholder="0.00"></td>`:''}</tr>`;}).join('')}
+    </tbody></table>
+    <div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>
   </div>`:'';
   return`<div class="overlay" onclick="if(event.target===this){G.eid=null;render()}"><div class="modal">
     <h2>${isN?'Ajouter un achat':'Modifier l\'achat'}</h2>
@@ -546,410 +546,456 @@ const vph=vt===‘perso’?`<div style="background:#f7fafc;border-radius:10px;pa
     <div class="macts"><button class="btn" onclick="G.eid=null;render()">Annuler</button><button class="btn btn-p" onclick="SR(${isN?"'new'":`'${r.id}'`})">${isN?'Ajouter':'Enregistrer'}</button></div>
   </div></div>`;
 }
-
-function AT(){const v=parseFloat(document.getElementById(‘ev’)?.value)||0;const t=parseInt(document.getElementById(‘et’)?.value)||0;const el=document.getElementById(‘ett’);if(el&&v&&t&&!el.dataset.m)el.value=(v*t).toFixed(2);}
-function CVT(){const nb=parseInt(document.getElementById(‘et’)?.value)||4;let tot=0;for(let i=0;i<nb;i++){const el=document.getElementById(`vpm_${i}`);if(el)tot+=parseFloat(el.value)||0;}const el=document.getElementById(‘vpt-t’);if(el)el.textContent=f(tot);}
+ 
+function AT(){const v=parseFloat(document.getElementById('ev')?.value)||0;const t=parseInt(document.getElementById('et')?.value)||0;const el=document.getElementById('ett');if(el&&v&&t&&!el.dataset.m)el.value=(v*t).toFixed(2);}
+function CVT(){const nb=parseInt(document.getElementById('et')?.value)||4;let tot=0;for(let i=0;i<nb;i++){const el=document.getElementById(`vpm_${i}`);if(el)tot+=parseFloat(el.value)||0;}const el=document.getElementById('vpt-t');if(el)el.textContent=f(tot);}
 function RVP(){
-const vt=document.getElementById(‘evt’)?.value;
-const nb=parseInt(document.getElementById(‘et’)?.value)||4;
-const pa=document.getElementById(‘epa’)?.value||‘non’;
-const ip=vt===‘perso’;
-const sc2=pa===‘perso’; // colonne copine si partage perso, peu importe le type de versement
-
-const evR=document.getElementById(‘ev-r’);const ettR=document.getElementById(‘ett-r’);
-if(evR)evR.style.display=ip?‘none’:’’;
-if(ettR)ettR.style.display=ip?‘none’:’’;
-
-const w=document.getElementById(‘vp-w’);if(!w)return;
-
-// Afficher le tableau si versements perso OU si partage perso (pour saisir les parts copine)
-if(!ip&&!sc2){w.innerHTML=’’;return;}
-
-const showMontant=ip; // colonnes montant seulement si versements perso
-w.innerHTML=`<div style="background:#f7fafc;border-radius:10px;padding:.75rem"> <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px"> ${ip&&sc2?'Saisir chaque versement et la part de ta copine':ip?'Saisir chaque versement':'Saisir la part de ta copine par versement'} </div> <table class="vpt"><thead><tr><th>#</th>${showMontant?'<th>Montant (€)</th>':''}${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody> ${Array.from({length:nb},(_,i)=>`<tr>
-<td style="color:#718096;font-weight:600">${i+1}</td>
-${showMontant?`<td><input type="number" step="0.01" id="vpm_${i}" placeholder="0.00" oninput="CVT()"></td>`:’’}
-${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" placeholder="0.00"></td>`:’’}
-</tr>`).join('')} </tbody></table> ${ip?`<div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>`:’’}
-
+  const vt=document.getElementById('evt')?.value;
+  const nb=parseInt(document.getElementById('et')?.value)||4;
+  const pa=document.getElementById('epa')?.value||'non';
+  const ip=vt==='perso';
+  const sc2=pa==='perso'; // colonne copine si partage perso, peu importe le type de versement
+ 
+  const evR=document.getElementById('ev-r');const ettR=document.getElementById('ett-r');
+  if(evR)evR.style.display=ip?'none':'';
+  if(ettR)ettR.style.display=ip?'none':'';
+ 
+  const w=document.getElementById('vp-w');if(!w)return;
+ 
+  // Afficher le tableau si versements perso OU si partage perso (pour saisir les parts copine)
+  if(!ip&&!sc2){w.innerHTML='';return;}
+ 
+  const showMontant=ip; // colonnes montant seulement si versements perso
+  w.innerHTML=`<div style="background:#f7fafc;border-radius:10px;padding:.75rem">
+    <div style="font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;margin-bottom:6px">
+      ${ip&&sc2?'Saisir chaque versement et la part de ta copine':ip?'Saisir chaque versement':'Saisir la part de ta copine par versement'}
+    </div>
+    <table class="vpt"><thead><tr><th>#</th>${showMontant?'<th>Montant (€)</th>':''}${sc2?'<th>Part copine (€)</th>':''}</tr></thead><tbody>
+    ${Array.from({length:nb},(_,i)=>`<tr>
+      <td style="color:#718096;font-weight:600">${i+1}</td>
+      ${showMontant?`<td><input type="number" step="0.01" id="vpm_${i}" placeholder="0.00" oninput="CVT()"></td>`:''}
+      ${sc2?`<td><input type="number" step="0.01" id="vpc_${i}" placeholder="0.00"></td>`:''}
+    </tr>`).join('')}
+    </tbody></table>
+    ${ip?`<div style="margin-top:8px;font-size:12px;color:#718096">Total : <span id="vpt-t" style="font-weight:600;color:#185FA5">0,00 €</span></div>`:''}
   </div>`;
 }
-
+ 
 function PM(){
-const r=G.rows.find(x=>x.id===G.pid);if(!r)return’’;
-const c=calc(r);
-return`<div class="overlay" onclick="if(event.target===this){G.pid=null;render()}"><div class="modal"> <h2>💳 Payer — ${r.marchand}</h2> <div class="psec"><h3>Que voulez-vous payer ?</h3> <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="UPS()"><label for="pt1">Payer la prochaine échéance <b>${f(c.cv)}</b><br><small style="color:#718096">→ Prochaine éch. : ${fd(addM(r.due))}</small></label></div> <div class="popt"><input type="radio" name="pt" id="pt2" value="tot" onchange="UPS()"><label for="pt2">Solder le reste complet <b>${f(c.restant)}</b></label></div> </div> ${r.partage?`<div class="psec"><h3>Part de ma copine</h3>
-<div class="popt"><input type="radio" name="cp" id="cp1" value="non" checked onchange="UPS()"><label for="cp1">Pas encore remboursée</label></div>
-<div class="popt"><input type="radio" name="cp" id="cp2" value="oui" onchange="UPS()"><label for="cp2">Ma copine a payé sa part <b>${f(c.cc)}</b></label></div>
-</div>`:’’}
-<div class="psum" id="ps"></div>
-<div class="macts"><button class="btn" onclick="G.pid=null;render()">Annuler</button><button class="btn btn-p" onclick="CP('${r.id}')">✓ Confirmer</button></div>
-
+  const r=G.rows.find(x=>x.id===G.pid);if(!r)return'';
+  const c=calc(r);
+  return`<div class="overlay" onclick="if(event.target===this){G.pid=null;render()}"><div class="modal">
+    <h2>💳 Payer — ${r.marchand}</h2>
+    <div class="psec"><h3>Que voulez-vous payer ?</h3>
+      <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="UPS()"><label for="pt1">Payer la prochaine échéance <b>${f(c.cv)}</b><br><small style="color:#718096">→ Prochaine éch. : ${fd(addM(r.due))}</small></label></div>
+      <div class="popt"><input type="radio" name="pt" id="pt2" value="tot" onchange="UPS()"><label for="pt2">Solder le reste complet <b>${f(c.restant)}</b></label></div>
+    </div>
+    ${r.partage?`<div class="psec"><h3>Part de ma copine</h3>
+      <div class="popt"><input type="radio" name="cp" id="cp1" value="non" checked onchange="UPS()"><label for="cp1">Pas encore remboursée</label></div>
+      <div class="popt"><input type="radio" name="cp" id="cp2" value="oui" onchange="UPS()"><label for="cp2">Ma copine a payé sa part <b>${f(c.cc)}</b></label></div>
+    </div>`:''}
+    <div class="psum" id="ps"></div>
+    <div class="macts"><button class="btn" onclick="G.pid=null;render()">Annuler</button><button class="btn btn-p" onclick="CP('${r.id}')">✓ Confirmer</button></div>
   </div></div>`;
 }
-
+ 
 function UPS(){
-const r=G.rows.find(x=>x.id===G.pid);if(!r)return;
-const c=calc(r);
-const pt=document.querySelector(‘input[name=“pt”]:checked’)?.value||‘ech’;
-const co=r.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
-const m=pt===‘tot’?c.restant:c.cv;const cp2=pt===‘tot’?c.pc:c.cc;const deb=co?m-cp2:m;
-let h=`<div class="psr"><span>Montant</span><span>${f(m)}</span></div>`;
-if(r.partage)h+=`<div class="psr"><span>Part copine</span><span>${f(cp2)}</span></div><div class="psr"><span>Remboursée ?</span><span>${co?'✓ Oui':'⏳ Non'}</span></div>`;
-h+=`<div class="psr tot"><span>Je débourse</span><span class="c-green">${f(deb)}</span></div>`;
-document.getElementById(‘ps’).innerHTML=h;
+  const r=G.rows.find(x=>x.id===G.pid);if(!r)return;
+  const c=calc(r);
+  const pt=document.querySelector('input[name="pt"]:checked')?.value||'ech';
+  const co=r.partage?(document.querySelector('input[name="cp"]:checked')?.value==='oui'):false;
+  const m=pt==='tot'?c.restant:c.cv;const cp2=pt==='tot'?c.pc:c.cc;const deb=co?m-cp2:m;
+  let h=`<div class="psr"><span>Montant</span><span>${f(m)}</span></div>`;
+  if(r.partage)h+=`<div class="psr"><span>Part copine</span><span>${f(cp2)}</span></div><div class="psr"><span>Remboursée ?</span><span>${co?'✓ Oui':'⏳ Non'}</span></div>`;
+  h+=`<div class="psr tot"><span>Je débourse</span><span class="c-green">${f(deb)}</span></div>`;
+  document.getElementById('ps').innerHTML=h;
 }
-
+ 
 function SM(){
-return`<div class="overlay" onclick="if(event.target===this){G.sm=false;render()}"><div class="modal">
-<h2>⚙️ Réglages</h2>
-<div style="display:flex;flex-direction:column;gap:16px">
-
-```
-  <div style="background:var(--bg);border-radius:10px;padding:1rem">
-    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Apparence</div>
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:13px;color:var(--text)">🌙 Mode sombre</span>
-      <button onclick="toggleDark()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:${isDark?'#185FA5':'var(--card)'};color:${isDark?'#fff':'var(--text)'};font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">
-        ${isDark?'Activé ✓':'Désactivé'}
-      </button>
+  return`<div class="overlay" onclick="if(event.target===this){G.sm=false;render()}"><div class="modal">
+    <h2>⚙️ Réglages</h2>
+    <div style="display:flex;flex-direction:column;gap:16px">
+ 
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Apparence</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:var(--text)">🌙 Mode sombre</span>
+          <button onclick="toggleDark()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:${isDark?'#185FA5':'var(--card)'};color:${isDark?'#fff':'var(--text)'};font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+            ${isDark?'Activé ✓':'Désactivé'}
+          </button>
+        </div>
+      </div>
+ 
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Photo de fond (écran PIN)</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;touch-action:manipulation;white-space:nowrap">
+            🖼 Choisir une photo
+            <input type="file" accept="image/*" style="display:none" onchange="uploadBg(this)">
+          </label>
+          <button onclick="removeBg()" style="padding:7px 14px;border-radius:8px;border:1px solid #F09595;color:#A32D2D;background:var(--card);font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">Supprimer</button>
+        </div>
+      </div>
+ 
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Code PIN</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="np" type="tel" maxlength="4" placeholder="Nouveau PIN (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer le PIN</button>
+        </div>
+      </div>
+ 
     </div>
-  </div>
-
-  <div style="background:var(--bg);border-radius:10px;padding:1rem">
-    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Photo de fond (écran PIN)</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <label style="cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;touch-action:manipulation;white-space:nowrap">
-        🖼 Choisir une photo
-        <input type="file" accept="image/*" style="display:none" onchange="uploadBg(this)">
-      </label>
-      <button onclick="removeBg()" style="padding:7px 14px;border-radius:8px;border:1px solid #F09595;color:#A32D2D;background:var(--card);font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">Supprimer</button>
-    </div>
-  </div>
-
-  <div style="background:var(--bg);border-radius:10px;padding:1rem">
-    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Code PIN</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <input id="np" type="tel" maxlength="4" placeholder="Nouveau PIN (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
-      <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer le PIN</button>
-    </div>
-  </div>
-
-</div>
-<div class="macts"><button class="btn" onclick="G.sm=false;render()">Fermer</button></div>
-```
-
+    <div class="macts"><button class="btn" onclick="G.sm=false;render()">Fermer</button></div>
   </div></div>`;
 }
-
-function OE(id){G.eid=id||‘new’;render();}
+ 
+function OE(id){G.eid=id||'new';render();}
 function OP(id){G.pid=id;render();setTimeout(UPS,50);}
-
-async function TR(id,cur){await SB.from(‘echeances’).update({rembourse:!cur}).eq(‘id’,id);await LD();render();T(!cur?‘✓ Remboursé’:‘Annulé’);}
-async function DR(id){if(!confirm(‘Supprimer ?’))return;await SB.from(‘echeances’).delete().eq(‘id’,id);await LD();render();T(‘Supprimé’);}
-
+ 
+async function TR(id,cur){await SB.from('echeances').update({rembourse:!cur}).eq('id',id);await LD();render();T(!cur?'✓ Remboursé':'Annulé');}
+async function DR(id){if(!confirm('Supprimer ?'))return;await SB.from('echeances').delete().eq('id',id);await LD();render();T('Supprimé');}
+ 
 async function SR(id){
-const marchand=document.getElementById(‘em’).value.trim();
-const pays=parseInt(document.getElementById(‘ep’).value)||0;
-const total_inst=parseInt(document.getElementById(‘et’).value)||4;
-const due=document.getElementById(‘ed’).value;
-const acheteur=document.getElementById(‘ea’).value;
-const pav=document.getElementById(‘epa’).value;
-const partage=pav!==‘non’;const partage_type=pav===‘non’?‘50/50’:pav;
-const source=document.getElementById(‘esr’).value;
-const notes=document.getElementById(‘en’).value.trim();
-const vt=document.getElementById(‘evt’).value;
-if(!marchand||!due){alert(‘Marchand et date obligatoires’);return;}
-let versement=0,montant_total=0,versements_perso=null;
-if(vt===‘perso’){
-const sc2=partage&&partage_type===‘perso’;
-versements_perso=[];let tot=0;
-for(let i=0;i<total_inst;i++){
-const mv=parseFloat(document.getElementById(`vpm_${i}`)?.value)||0;
-const cv2=sc2?(parseFloat(document.getElementById(`vpc_${i}`)?.value)||0):0;
-versements_perso.push({montant:mv,copine_montant:cv2});tot+=mv;
+  const marchand=document.getElementById('em').value.trim();
+  const pays=parseInt(document.getElementById('ep').value)||0;
+  const total_inst=parseInt(document.getElementById('et').value)||4;
+  const due=document.getElementById('ed').value;
+  const acheteur=document.getElementById('ea').value;
+  const pav=document.getElementById('epa').value;
+  const partage=pav!=='non';const partage_type=pav==='non'?'50/50':pav;
+  const source=document.getElementById('esr').value;
+  const notes=document.getElementById('en').value.trim();
+  const vt=document.getElementById('evt').value;
+  if(!marchand||!due){alert('Marchand et date obligatoires');return;}
+  let versement=0,montant_total=0,versements_perso=null;
+  if(vt==='perso'){
+    const sc2=partage&&partage_type==='perso';
+    versements_perso=[];let tot=0;
+    for(let i=0;i<total_inst;i++){
+      const mv=parseFloat(document.getElementById(`vpm_${i}`)?.value)||0;
+      const cv2=sc2?(parseFloat(document.getElementById(`vpc_${i}`)?.value)||0):0;
+      versements_perso.push({montant:mv,copine_montant:cv2});tot+=mv;
+    }
+    montant_total=tot;versement=versements_perso[0]?.montant||0;
+  } else if(partage&&partage_type==='perso'){
+    // Versements égaux mais partage personnalisé → sauvegarder les parts copine
+    versements_perso=[];
+    for(let i=0;i<total_inst;i++){
+      const cv2=parseFloat(document.getElementById(`vpc_${i}`)?.value)||0;
+      versements_perso.push({montant:parseFloat(document.getElementById('ev')?.value)||0,copine_montant:cv2});
+    }
+    versement=parseFloat(document.getElementById('ev')?.value)||0;
+    if(!versement){alert('Montant du versement manquant');return;}
+    const mr=document.getElementById('ett')?.value;
+    montant_total=mr?parseFloat(mr):versement*total_inst;
+  } else {
+    versement=parseFloat(document.getElementById('ev')?.value)||0;
+    if(!versement){alert('Montant du versement manquant');return;}
+    const mr=document.getElementById('ett')?.value;
+    montant_total=mr?parseFloat(mr):versement*total_inst;
+  }
+  const item={marchand,versement,montant_total,versement_type:vt,versements_perso,pays,total_inst,due,acheteur,partage,partage_type,source,notes};
+  if(id==='new'){await SB.from('echeances').insert({...item,rembourse:false});T('Ajouté ✓');}
+  else{await SB.from('echeances').update(item).eq('id',id);T('Modifié ✓');}
+  await LD();G.eid=null;render();
 }
-montant_total=tot;versement=versements_perso[0]?.montant||0;
-} else if(partage&&partage_type===‘perso’){
-// Versements égaux mais partage personnalisé → sauvegarder les parts copine
-versements_perso=[];
-for(let i=0;i<total_inst;i++){
-const cv2=parseFloat(document.getElementById(`vpc_${i}`)?.value)||0;
-versements_perso.push({montant:parseFloat(document.getElementById(‘ev’)?.value)||0,copine_montant:cv2});
-}
-versement=parseFloat(document.getElementById(‘ev’)?.value)||0;
-if(!versement){alert(‘Montant du versement manquant’);return;}
-const mr=document.getElementById(‘ett’)?.value;
-montant_total=mr?parseFloat(mr):versement*total_inst;
-} else {
-versement=parseFloat(document.getElementById(‘ev’)?.value)||0;
-if(!versement){alert(‘Montant du versement manquant’);return;}
-const mr=document.getElementById(‘ett’)?.value;
-montant_total=mr?parseFloat(mr):versement*total_inst;
-}
-const item={marchand,versement,montant_total,versement_type:vt,versements_perso,pays,total_inst,due,acheteur,partage,partage_type,source,notes};
-if(id===‘new’){await SB.from(‘echeances’).insert({…item,rembourse:false});T(‘Ajouté ✓’);}
-else{await SB.from(‘echeances’).update(item).eq(‘id’,id);T(‘Modifié ✓’);}
-await LD();G.eid=null;render();
-}
-
+ 
 async function CP(id){
-const r=G.rows.find(x=>x.id===id);if(!r)return;
-const pt=document.querySelector(‘input[name=“pt”]:checked’)?.value||‘ech’;
-const co=r.partage?(document.querySelector(‘input[name=“cp”]:checked’)?.value===‘oui’):false;
-const today=new Date().toISOString().split(‘T’)[0];
-let u={last_paid_date:today};
-if(pt===‘tot’){u.pays=r.total_inst;if(co)u.rembourse=true;}
-else{u.pays=r.pays+1;u.due=addM(r.due);if(r.partage)u.rembourse=co?true:false;}
-await SB.from(‘echeances’).update(u).eq(‘id’,id);
-await LD();G.pid=null;render();T(’Payé ✓ — Prochaine : ’+fd(u.due||r.due));
+  const r=G.rows.find(x=>x.id===id);if(!r)return;
+  const pt=document.querySelector('input[name="pt"]:checked')?.value||'ech';
+  const co=r.partage?(document.querySelector('input[name="cp"]:checked')?.value==='oui'):false;
+  const today=new Date().toISOString().split('T')[0];
+  let u={last_paid_date:today};
+  if(pt==='tot'){u.pays=r.total_inst;if(co)u.rembourse=true;}
+  else{u.pays=r.pays+1;u.due=addM(r.due);if(r.partage)u.rembourse=co?true:false;}
+  await SB.from('echeances').update(u).eq('id',id);
+  await LD();G.pid=null;render();T('Payé ✓ — Prochaine : '+fd(u.due||r.due));
 }
-
+ 
 async function SPC(){
-const v=document.getElementById(‘np’).value.trim();
-if(!/^\d{4}$/.test(v)){alert(‘4 chiffres requis’);return;}
-await SB.from(‘app_config’).upsert({key:‘pin’,value:v});
-pc=v;G.pm=false;render();T(‘PIN mis à jour ✓’);
+  const v=document.getElementById('np').value.trim();
+  if(!/^\d{4}$/.test(v)){alert('4 chiffres requis');return;}
+  await SB.from('app_config').upsert({key:'pin',value:v});
+  pc=v;G.pm=false;render();T('PIN mis à jour ✓');
 }
-
-function T(msg){const t=document.createElement(‘div’);t.className=‘toast’;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+ 
+function T(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
 async function uploadBg(input){
-const file=input.files[0];
-if(!file)return;
-// Redimensionner et compresser l’image avant stockage
-const reader=new FileReader();
-reader.onload=async(e)=>{
-const img=new Image();
-img.onload=async()=>{
-// Redimensionner à max 1200px pour limiter la taille
-const MAX=1200;
-const canvas=document.createElement(‘canvas’);
-let w=img.width,h=img.height;
-if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-else if(h>w&&h>MAX){w=Math.round(w*MAX/h);h=MAX;}
-canvas.width=w;canvas.height=h;
-canvas.getContext(‘2d’).drawImage(img,0,0,w,h);
-const dataUrl=canvas.toDataURL(‘image/jpeg’,0.7);
-// Sauvegarder dans Supabase
-await SB.from(‘app_config’).upsert({key:‘bg_photo’,value:dataUrl});
-applyBg(dataUrl);
-T(‘Photo enregistrée ✓’);
-};
-img.src=e.target.result;
-};
-reader.readAsDataURL(file);
+  const file=input.files[0];
+  if(!file)return;
+  // Redimensionner et compresser l'image avant stockage
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    const img=new Image();
+    img.onload=async()=>{
+      // Redimensionner à max 1200px pour limiter la taille
+      const MAX=1200;
+      const canvas=document.createElement('canvas');
+      let w=img.width,h=img.height;
+      if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      else if(h>w&&h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl=canvas.toDataURL('image/jpeg',0.7);
+      // Sauvegarder dans Supabase
+      await SB.from('app_config').upsert({key:'bg_photo',value:dataUrl});
+      applyBg(dataUrl);
+      T('Photo enregistrée ✓');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
-
+ 
 // Dark mode
-let isDark = localStorage.getItem(‘dark’) === ‘1’;
+let isDark = localStorage.getItem('dark') === '1';
 function applyDark(){
-document.body.classList.toggle(‘dark’, isDark);
-const btn = document.getElementById(‘dark-btn’);
-if(btn) btn.textContent = isDark ? ‘☀️’ : ‘🌙’;
+  document.body.classList.toggle('dark', isDark);
+  const btn = document.getElementById('dark-btn');
+  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
 }
 function toggleDark(){
-isDark = !isDark;
-localStorage.setItem(‘dark’, isDark ? ‘1’ : ‘0’);
-applyDark();
-if(G.sm) render(); // re-render pour mettre à jour le bouton dans les réglages
-setTimeout(drawChart, 50);
+  isDark = !isDark;
+  localStorage.setItem('dark', isDark ? '1' : '0');
+  applyDark();
+  if(G.sm) render(); // re-render pour mettre à jour le bouton dans les réglages
+  setTimeout(drawChart, 50);
 }
 applyDark();
-
-// Graphique - reconstruit l’historique des paiements déjà effectués
+ 
+// Graphique - reconstruit l'historique des paiements déjà effectués
 let chartInstance = null;
 function drawChart(){
-if(typeof Chart===‘undefined’) return;
-const canvas = document.getElementById(‘chart-mois’);
-if(!canvas) return;
-if(chartInstance){ chartInstance.destroy(); chartInstance = null; }
-
-const now = new Date();
-const curY = now.getFullYear(), curM = now.getMonth();
-const months = [];
-
-if(!G.sf){
-for(let i=1;i<=6;i++){
-const d=new Date(curY,curM+i,1);
-months.push({y:d.getFullYear(),m:d.getMonth(),
-label:d.toLocaleDateString(‘fr-FR’,{month:‘short’,year:‘2-digit’}),
-moi:0,copine:0,partage:0,pMoi:0,pCop:0,
-itemsMoi:[],itemsCop:[],itemsPar:[]});
-}
-G.rows.forEach(r=>{
-const rest=r.total_inst-r.pays;
-if(rest<=0)return;
-for(let p=0;p<rest;p++){
-const dd=new Date(r.due+‘T12:00:00’);
-dd.setMonth(dd.getMonth()+p);
-const slot=months.find(x=>x.y===dd.getFullYear()&&x.m===dd.getMonth());
-if(!slot)continue;
-const vIdx=r.pays+p;
-let m=parseFloat(r.versement)||0;
-if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].montant))
-m=parseFloat(r.versements_perso[vIdx].montant);
-if(!m)continue;
-// Part copine sur cet achat partagé
-let mc=0;
-if(r.partage){
-if(r.partage_type===‘perso’&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].copine_montant))
-mc=parseFloat(r.versements_perso[vIdx].copine_montant);
-else mc=m/2;
-}
-if(r.partage){
-slot.pMoi+=m-mc; slot.pCop+=mc;
-slot.partage+=m;
-slot.itemsPar.push({n:r.marchand,total:m,maPart:m-mc,copPart:mc});
-} else if(r.acheteur===‘Moi’){
-slot.moi+=m;
-slot.itemsMoi.push({n:r.marchand,m});
-} else {
-slot.copine+=m;
-slot.itemsCop.push({n:r.marchand,m});
-}
-}
-});
-} else {
-for(let i=5;i>=0;i–){
-const d=new Date(curY,curM-i,1);
-months.push({y:d.getFullYear(),m:d.getMonth(),
-label:d.toLocaleDateString(‘fr-FR’,{month:‘short’,year:‘2-digit’}),
-moi:0,copine:0,partage:0,pMoi:0,pCop:0,
-itemsMoi:[],itemsCop:[],itemsPar:[]});
-}
-G.rows.forEach(r=>{
-if(r.pays===0)return;
-const v=parseFloat(r.versement)||0;
-if(!v)return;
-const nextDue=new Date(r.due+‘T12:00:00’);
-for(let p=1;p<=r.pays;p++){
-const pd=new Date(nextDue.getTime());
-pd.setMonth(pd.getMonth()-p);
-const slot=months.find(x=>x.y===pd.getFullYear()&&x.m===pd.getMonth());
-if(!slot)continue;
-const vIdx=r.pays-p;
-let m=v;
-if(r.versement_type===‘perso’&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].montant))
-m=parseFloat(r.versements_perso[vIdx].montant);
-let mc=0;
-if(r.partage){
-if(r.partage_type===‘perso’&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].copine_montant))
-mc=parseFloat(r.versements_perso[vIdx].copine_montant);
-else mc=m/2;
-}
-if(r.partage){
-slot.pMoi+=m-mc; slot.pCop+=mc;
-slot.partage+=m;
-slot.itemsPar.push({n:r.marchand,total:m,maPart:m-mc,copPart:mc});
-} else if(r.acheteur===‘Moi’){
-slot.moi+=m; slot.itemsMoi.push({n:r.marchand,m});
-} else {
-slot.copine+=m; slot.itemsCop.push({n:r.marchand,m});
-}
-}
-});
-}
-
-const dark=document.body.classList.contains(‘dark’);
-const tc=dark?’#94a3b8’:’#718096’;
-const gc=dark?’#334155’:’#e2e8f0’;
-const fa=G.cfa;
-
-// Calculer les données selon le filtre
-// moi_p = moi solo + ma part des partagés (une seule barre)
-// cop_p = copine solo + part copine des partagés (une seule barre)
-const getData = slot => {
-if(fa===‘tous’)      return {moi:slot.moi, copine:slot.copine, partage:slot.partage};
-if(fa===‘moi_s’)     return {moi:slot.moi, copine:0, partage:0};
-if(fa===‘moi_p’)     return {moi:slot.moi+slot.pMoi, copine:0, partage:0}; // une barre
-if(fa===‘cop_s’)     return {moi:0, copine:slot.copine, partage:0};
-if(fa===‘cop_p’)     return {moi:0, copine:slot.copine+slot.pCop, partage:0}; // une barre
-if(fa===‘par’)       return {moi:0, copine:0, partage:slot.partage};
-return {moi:slot.moi, copine:slot.copine, partage:slot.partage};
-};
-
-const datasets=[];
-const moiLabel   = fa===‘moi_p’?‘👤 Moi (+ partagés)’:‘👤 Moi’;
-const copLabel   = fa===‘cop_p’?‘💑 Copine (+ partagés)’:‘💑 Copine’;
-
-if([‘tous’,‘moi_s’,‘moi_p’].includes(fa))
-datasets.push({label:moiLabel, data:months.map(s=>Math.round(getData(s).moi*100)/100), backgroundColor:’#185FA5CC’, borderRadius:4});
-if([‘tous’,‘cop_s’,‘cop_p’].includes(fa))
-datasets.push({label:copLabel, data:months.map(s=>Math.round(getData(s).copine*100)/100), backgroundColor:’#854F0BCC’, borderRadius:4});
-if([‘tous’,‘par’].includes(fa))
-datasets.push({label:‘🤝 Partagé’, data:months.map(s=>Math.round(getData(s).partage*100)/100), backgroundColor:’#27500ACC’, borderRadius:4});
-
-chartInstance=new Chart(canvas,{
-type:‘bar’,
-data:{labels:months.map(x=>x.label), datasets},
-options:{
-responsive:true,
-plugins:{
-legend:{labels:{color:tc,font:{size:11},boxWidth:12}},
-tooltip:{enabled:false}
-},
-interaction:{mode:‘index’,intersect:false},
-scales:{
-x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},
-y:{ticks:{color:tc,font:{size:10},callback:v=>v+’ €’},grid:{color:gc},beginAtZero:true}
-}
-}
-});
-
-// Mobile : tap pour afficher détail dans un panneau sous le graphique
-function showDetail(idx){
-const slot = months[idx];
-if(!slot) return;
-const el = document.getElementById(‘chart-detail’);
-if(!el) return;
-const fa2 = G.cfa;
-let html = ‘<div style="font-weight:600;margin-bottom:6px;color:var(--text)">’+slot.label+’</div>’;
-
-```
-if(['tous','moi_s','moi_p'].includes(fa2) && slot.itemsMoi.length){
-  html += '<div style="font-weight:600;color:#185FA5;margin-bottom:3px">👤 Moi</div>';
-  slot.itemsMoi.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
-}
-if(fa2==='moi_p' && slot.itemsPar.length){
-  html += '<div style="font-weight:600;color:#185FA5;margin-top:6px;margin-bottom:3px">💛 Partagés</div>';
-  slot.itemsPar.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.maPart.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
-}
-if(['tous','cop_s','cop_p'].includes(fa2) && slot.itemsCop.length){
-  html += '<div style="font-weight:600;color:#854F0B;margin-top:6px;margin-bottom:3px">💑 Copine</div>';
-  slot.itemsCop.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.m.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
-}
-if(fa2==='cop_p' && slot.itemsPar.length){
-  html += '<div style="font-weight:600;color:#854F0B;margin-top:6px;margin-bottom:3px">💛 Partagés (sa part)</div>';
-  slot.itemsPar.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.copPart.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
-}
-if(['tous','par'].includes(fa2) && slot.itemsPar.length){
-  html += '<div style="font-weight:600;color:#27500A;margin-top:6px;margin-bottom:3px">🤝 Partagés</div>';
-  slot.itemsPar.forEach(i=>{ html += '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i.total.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
-}
-// Total
-const total = getData(slot).moi + getData(slot).copine + getData(slot).partage;
-html += '<div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:6px;border-top:2px solid var(--border);font-weight:700;font-size:13px"><span>Total</span><span>'+total.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
-
-el.innerHTML = html;
-el.style.display = 'block';
-```
-
-}
-
-canvas.onclick = function(e){
-const pts = chartInstance.getElementsAtEventForMode(e,‘index’,{intersect:false},true);
-if(pts.length) showDetail(pts[0].index);
-};
+  if(typeof Chart==='undefined') return;
+  const canvas = document.getElementById('chart-mois');
+  if(!canvas) return;
+  if(chartInstance){ chartInstance.destroy(); chartInstance = null; }
+ 
+  const now = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth();
+  const months = [];
+ 
+  if(!G.sf){
+    for(let i=1;i<=6;i++){
+      const d=new Date(curY,curM+i,1);
+      months.push({y:d.getFullYear(),m:d.getMonth(),
+        label:d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}),
+        moi:0,copine:0,partage:0,pMoi:0,pCop:0,
+        itemsMoi:[],itemsCop:[],itemsPar:[]});
+    }
+    G.rows.forEach(r=>{
+      const rest=r.total_inst-r.pays;
+      if(rest<=0)return;
+      for(let p=0;p<rest;p++){
+        const dd=new Date(r.due+'T12:00:00');
+        dd.setMonth(dd.getMonth()+p);
+        const slot=months.find(x=>x.y===dd.getFullYear()&&x.m===dd.getMonth());
+        if(!slot)continue;
+        const vIdx=r.pays+p;
+        let m=parseFloat(r.versement)||0;
+        if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].montant))
+          m=parseFloat(r.versements_perso[vIdx].montant);
+        if(!m)continue;
+        // Part copine sur cet achat partagé
+        let mc=0;
+        if(r.partage){
+          if(r.partage_type==='perso'&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].copine_montant))
+            mc=parseFloat(r.versements_perso[vIdx].copine_montant);
+          else mc=m/2;
+        }
+        if(r.partage){
+          slot.pMoi+=m-mc; slot.pCop+=mc;
+          slot.partage+=m;
+          slot.itemsPar.push({n:r.marchand,total:m,maPart:m-mc,copPart:mc});
+        } else if(r.acheteur==='Moi'){
+          slot.moi+=m;
+          slot.itemsMoi.push({n:r.marchand,m});
+        } else {
+          slot.copine+=m;
+          slot.itemsCop.push({n:r.marchand,m});
+        }
+      }
+    });
+  } else {
+    for(let i=5;i>=0;i--){
+      const d=new Date(curY,curM-i,1);
+      months.push({y:d.getFullYear(),m:d.getMonth(),
+        label:d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'}),
+        moi:0,copine:0,partage:0,pMoi:0,pCop:0,
+        itemsMoi:[],itemsCop:[],itemsPar:[]});
+    }
+    G.rows.forEach(r=>{
+      if(r.pays===0)return;
+      const v=parseFloat(r.versement)||0;
+      if(!v)return;
+      const nextDue=new Date(r.due+'T12:00:00');
+      for(let p=1;p<=r.pays;p++){
+        const pd=new Date(nextDue.getTime());
+        pd.setMonth(pd.getMonth()-p);
+        const slot=months.find(x=>x.y===pd.getFullYear()&&x.m===pd.getMonth());
+        if(!slot)continue;
+        const vIdx=r.pays-p;
+        let m=v;
+        if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].montant))
+          m=parseFloat(r.versements_perso[vIdx].montant);
+        let mc=0;
+        if(r.partage){
+          if(r.partage_type==='perso'&&r.versements_perso&&r.versements_perso[vIdx]&&parseFloat(r.versements_perso[vIdx].copine_montant))
+            mc=parseFloat(r.versements_perso[vIdx].copine_montant);
+          else mc=m/2;
+        }
+        if(r.partage){
+          slot.pMoi+=m-mc; slot.pCop+=mc;
+          slot.partage+=m;
+          slot.itemsPar.push({n:r.marchand,total:m,maPart:m-mc,copPart:mc});
+        } else if(r.acheteur==='Moi'){
+          slot.moi+=m; slot.itemsMoi.push({n:r.marchand,m});
+        } else {
+          slot.copine+=m; slot.itemsCop.push({n:r.marchand,m});
+        }
+      }
+    });
+  }
+ 
+  const dark=document.body.classList.contains('dark');
+  const tc=dark?'#94a3b8':'#718096';
+  const gc=dark?'#334155':'#e2e8f0';
+  const fa=G.cfa;
+ 
+  // Calculer les données selon le filtre
+  // moi_p = moi solo + ma part des partagés (une seule barre)
+  // cop_p = copine solo + part copine des partagés (une seule barre)
+  const getData = slot => {
+    if(fa==='tous')      return {moi:slot.moi, copine:slot.copine, partage:slot.partage};
+    if(fa==='moi_s')     return {moi:slot.moi, copine:0, partage:0};
+    if(fa==='moi_p')     return {moi:slot.moi+slot.pMoi, copine:0, partage:0}; // une barre
+    if(fa==='cop_s')     return {moi:0, copine:slot.copine, partage:0};
+    if(fa==='cop_p')     return {moi:0, copine:slot.copine+slot.pCop, partage:0}; // une barre
+    if(fa==='par')       return {moi:0, copine:0, partage:slot.partage};
+    return {moi:slot.moi, copine:slot.copine, partage:slot.partage};
+  };
+ 
+  const datasets=[];
+  const moiLabel   = fa==='moi_p'?'👤 Moi (+ partagés)':'👤 Moi';
+  const copLabel   = fa==='cop_p'?'💑 Copine (+ partagés)':'💑 Copine';
+ 
+  if(['tous','moi_s','moi_p'].includes(fa))
+    datasets.push({label:moiLabel, data:months.map(s=>Math.round(getData(s).moi*100)/100), backgroundColor:'#185FA5CC', borderRadius:4});
+  if(['tous','cop_s','cop_p'].includes(fa))
+    datasets.push({label:copLabel, data:months.map(s=>Math.round(getData(s).copine*100)/100), backgroundColor:'#854F0BCC', borderRadius:4});
+  if(['tous','par'].includes(fa))
+    datasets.push({label:'🤝 Partagé', data:months.map(s=>Math.round(getData(s).partage*100)/100), backgroundColor:'#27500ACC', borderRadius:4});
+ 
+  chartInstance=new Chart(canvas,{
+    type:'bar',
+    data:{labels:months.map(x=>x.label), datasets},
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{labels:{color:tc,font:{size:11},boxWidth:12}},
+        tooltip:{enabled:false}
+      },
+      interaction:{mode:'index',intersect:false},
+      scales:{
+        x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},
+        y:{ticks:{color:tc,font:{size:10},callback:v=>v+' €'},grid:{color:gc},beginAtZero:true}
+      }
+    }
+  });
+ 
+  // Mobile : tap pour afficher détail dans un panneau sous le graphique
+  function showDetail(idx){
+    const slot = months[idx];
+    if(!slot) return;
+    const el = document.getElementById('chart-detail');
+    if(!el) return;
+    const fa2 = G.cfa;
+    let html = '<div style="font-weight:600;margin-bottom:6px;color:var(--text)">'+slot.label+'</div>';
+ 
+    // Helper : affiche une section avec total par section
+    function sec(title, color, items, key){
+      if(!items.length) return '';
+      const tot = items.reduce((s,i)=>s+i[key],0);
+      let h='<div style="font-weight:600;color:'+color+';margin-top:8px;margin-bottom:3px">'+title+'</div>';
+      items.forEach(i=>{ h+='<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i[key].toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
+      h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700;color:'+color+'"><span>Total</span><span>'+tot.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
+      return h;
+    }
+    if(['tous','moi_s','moi_p'].includes(fa2)) html += sec('👤 Moi','#185FA5', slot.itemsMoi,'m');
+    if(fa2==='moi_p')  html += sec('💛 Partagés','#185FA5', slot.itemsPar,'maPart');
+    if(['tous','cop_s','cop_p'].includes(fa2)) html += sec('💑 Copine','#854F0B', slot.itemsCop,'m');
+    if(fa2==='cop_p')  html += sec('💛 Partagés','#854F0B', slot.itemsPar,'copPart');
+    if(['tous','par'].includes(fa2)) html += sec('🤝 Partagés','#27500A', slot.itemsPar,'total');
+    // Totaux selon filtre
+    const tMs = Math.round(slot.moi*100)/100;          // moi solo
+    const tCs = Math.round(slot.copine*100)/100;        // copine solo
+    const tP  = Math.round(slot.partage*100)/100;       // total partagé brut
+    const tpM = Math.round(slot.pMoi*100)/100;          // ma part des partagés
+    const tpC = Math.round(slot.pCop*100)/100;          // part copine des partagés
+ 
+    html += '<div style="margin-top:8px;padding-top:6px;border-top:2px solid var(--border)">';
+ 
+    if(fa==='tous'){
+      // Tous : 3 lignes + global
+      html += row('👤 Mes achats', tMs, '#185FA5');
+      html += row('💑 Achats copine', tCs, '#854F0B');
+      html += row('🤝 Total partagé', tP, '#27500A');
+      const g = Math.round((tMs+tCs+tP)*100)/100;
+      html += rowBold('💰 Total global', g);
+ 
+    } else if(fa==='moi_p'){
+      // Moi + partagés : mes achats + ma part + total
+      html += row('👤 Mes achats', tMs, '#185FA5');
+      html += row('💛 Ma part partagés', tpM, '#185FA5');
+      const t = Math.round((tMs+tpM)*100)/100;
+      html += rowBold('💰 Total', t);
+ 
+    } else if(fa==='moi_s'){
+      html += rowBold('👤 Total moi', tMs);
+ 
+    } else if(fa==='cop_p'){
+      // Copine + partagés
+      html += row('💑 Achats copine', tCs, '#854F0B');
+      html += row('💛 Sa part partagés', tpC, '#854F0B');
+      const t = Math.round((tCs+tpC)*100)/100;
+      html += rowBold('💰 Total', t);
+ 
+    } else if(fa==='cop_s'){
+      html += rowBold('💑 Total copine', tCs);
+ 
+    } else if(fa==='par'){
+      html += row('👤 Ma part', tpM, '#185FA5');
+      html += row('💑 Part copine', tpC, '#854F0B');
+      html += rowBold('🤝 Total partagé', tP);
+    }
+ 
+    html += '</div>';
+ 
+    function row(label, val, color){
+      return '<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px"><span style="color:var(--text3)">'+label+'</span><span style="font-weight:600;color:'+color+'">'+val.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
+    }
+    function rowBold(label, val){
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;margin-top:4px;border-top:1px solid var(--border);font-size:13px;font-weight:700"><span>'+label+'</span><span>'+val.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
+    }
+ 
+    el.innerHTML = html;
+    el.style.display = 'block';
+  }
+ 
+  canvas.onclick = function(e){
+    const pts = chartInstance.getElementsAtEventForMode(e,'index',{intersect:false},true);
+    if(pts.length) showDetail(pts[0].index);
+  };
 }
 async function removeBg(){
-await SB.from(‘app_config’).upsert({key:‘bg_photo’,value:’’});
-const ps=document.getElementById(‘pin-screen’);
-if(ps){ps.style.backgroundImage=’’;const ov=document.getElementById(‘pin-overlay’);if(ov)ov.style.display=‘none’;}
-T(‘Photo supprimée’);
+  await SB.from('app_config').upsert({key:'bg_photo',value:''});
+  const ps=document.getElementById('pin-screen');
+  if(ps){ps.style.backgroundImage='';const ov=document.getElementById('pin-overlay');if(ov)ov.style.display='none';}
+  T('Photo supprimée');
 }
-
+ 
 async function AI(){await LD();render();setTimeout(drawChart, 100);}
 </script>
-
 </body>
 </html>
