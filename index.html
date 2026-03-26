@@ -298,6 +298,25 @@ function calc(r){
   return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,cv:gv(r,r.pays),cc:gc(r,r.pays)};
 }
  
+function aboForMonth(y,m){
+  // Retourne les abonnements actifs pour un mois/an donné
+  // Un abo actif = prélèvement ce mois là
+  const mi=[],co=[];
+  (G.abos||[]).filter(a=>a.actif).forEach(a=>{
+    const amt=parseFloat(a.montant)||0;
+    const mc=a.partage?(a.partage_type==='perso'?parseFloat(a.montant_copine||0):amt/2):0;
+    if(a.partage){
+      mi.push({n:a.nom,m:amt-mc,p:true,abo:true});
+      co.push({n:a.nom,m:mc,p:true,abo:true});
+    } else if(a.acheteur==='Moi'){
+      mi.push({n:a.nom,m:amt,p:false,abo:true});
+    } else {
+      co.push({n:a.nom,m:amt,p:false,abo:true});
+    }
+  });
+  return{mi,co};
+}
+ 
 function GMD(y,m){
   const s=new Date(y,m,1,0,0,0);
   const e=new Date(y,m+1,0,23,59,59); // fin du dernier jour du mois
@@ -353,6 +372,14 @@ function filtered(){
 function kpis(){
   let te=0,tr=0,tp=0,mr=0,cr=0;
   G.rows.forEach(r=>{const c=calc(r);te+=c.total;tr+=c.restant;if(r.partage)tp+=c.pc;if(r.acheteur==='Moi')mr+=r.partage?c.restant-c.pc:c.restant;if(r.acheteur==='Copine')cr+=c.restant;});
+  // Ajouter abonnements mensuels dans les totaux
+  (G.abos||[]).filter(a=>a.actif).forEach(a=>{
+    const amt=parseFloat(a.montant)||0;
+    const mc=a.partage?(a.partage_type==='perso'?parseFloat(a.montant_copine||0):amt/2):0;
+    if(a.partage) tp+=mc;
+    else if(a.acheteur==='Moi') mr+=amt;
+    else cr+=amt;
+  });
   return{te,tr,tp,mr,cr};
 }
  
@@ -362,7 +389,13 @@ function JT(j){if(j<0)return`<span class="c-red" style="font-weight:700">${Math.
  
 function MB(off){
   const now=new Date();
-  const d=GMD(now.getFullYear(),now.getMonth()+off);
+  const y=now.getFullYear(),m2=now.getMonth()+off;
+  const d=GMD(y,m2);
+  const ab=aboForMonth(y,m2);
+  // Fusionner abos dans les listes
+  const allMi=[...d.mi,...ab.mi];
+  const allCo=[...d.co,...ab.co];
+  d.mi=allMi; d.co=allCo;
   const tm=d.mi.reduce((s,i)=>s+i.m,0);
   const tc=d.co.reduce((s,i)=>s+i.m,0);
   const tpMoi=d.mi.filter(i=>i.p).reduce((s,i)=>s+i.m,0);
@@ -960,6 +993,21 @@ function drawChart(){
         }
       }
     });
+    // Abonnements : 1 versement par mois futur
+    (G.abos||[]).filter(a=>a.actif).forEach(a=>{
+      const amt=parseFloat(a.montant)||0;
+      const mc=a.partage?(a.partage_type==='perso'?parseFloat(a.montant_copine||0):amt/2):0;
+      months.forEach(slot=>{
+        if(a.partage){
+          slot.partage+=amt; slot.pMoi+=amt-mc; slot.pCop+=mc;
+          slot.itemsPar.push({n:a.nom+'🔄',total:amt,maPart:amt-mc,copPart:mc});
+        } else if(a.acheteur==='Moi'){
+          slot.moi+=amt; slot.itemsMoi.push({n:a.nom+'🔄',m:amt});
+        } else {
+          slot.copine+=amt; slot.itemsCop.push({n:a.nom+'🔄',m:amt});
+        }
+      });
+    });
   } else {
     for(let i=5;i>=0;i--){
       const d=new Date(curY,curM-i,1);
@@ -998,6 +1046,21 @@ function drawChart(){
           slot.copine+=m; slot.itemsCop.push({n:r.marchand,m});
         }
       }
+    });
+    // Abonnements dans l'historique : 1 versement par mois passé aussi
+    (G.abos||[]).filter(a=>a.actif).forEach(a=>{
+      const amt=parseFloat(a.montant)||0;
+      const mc=a.partage?(a.partage_type==='perso'?parseFloat(a.montant_copine||0):amt/2):0;
+      months.forEach(slot=>{
+        if(a.partage){
+          slot.partage+=amt; slot.pMoi+=amt-mc; slot.pCop+=mc;
+          slot.itemsPar.push({n:a.nom+'🔄',total:amt,maPart:amt-mc,copPart:mc});
+        } else if(a.acheteur==='Moi'){
+          slot.moi+=amt; slot.itemsMoi.push({n:a.nom+'🔄',m:amt});
+        } else {
+          slot.copine+=amt; slot.itemsCop.push({n:a.nom+'🔄',m:amt});
+        }
+      });
     });
   }
  
