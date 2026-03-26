@@ -1119,20 +1119,40 @@ function drawChart(){
     const fa2 = G.cfa;
     let html = '<div style="font-weight:600;margin-bottom:6px;color:var(--text)">'+slot.label+'</div>';
  
-    // Helper : affiche une section avec total par section
+    const isAbo = i => i.n && i.n.endsWith('🔄');
+    // Helper : affiche une liste d'items avec son total
     function sec(title, color, items, key){
       if(!items.length) return '';
       const tot = items.reduce((s,i)=>s+i[key],0);
       let h='<div style="font-weight:600;color:'+color+';margin-top:8px;margin-bottom:3px">'+title+'</div>';
-      items.forEach(i=>{ h+='<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+i.n+'</span><span style="font-weight:600">'+i[key].toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>'; });
+      items.forEach(i=>{
+        const nom = i.n.replace('🔄','').trim();
+        h+='<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)"><span>'+nom+'</span><span style="font-weight:600">'+i[key].toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
+      });
       h+='<div style="display:flex;justify-content:space-between;padding:3px 0;font-weight:700;color:'+color+'"><span>Total</span><span>'+tot.toLocaleString('fr-FR',{minimumFractionDigits:2})+' €</span></div>';
       return h;
     }
-    if(['tous','moi_s','moi_p'].includes(fa2)) html += sec('👤 Moi','#185FA5', slot.itemsMoi,'m');
-    if(fa2==='moi_p')  html += sec('💛 Partagés','#185FA5', slot.itemsPar,'maPart');
-    if(['tous','cop_s','cop_p'].includes(fa2)) html += sec('💑 Copine','#854F0B', slot.itemsCop,'m');
-    if(fa2==='cop_p')  html += sec('💛 Partagés','#854F0B', slot.itemsPar,'copPart');
-    if(['tous','par'].includes(fa2)) html += sec('🤝 Partagés','#27500A', slot.itemsPar,'total');
+    // Séparer achats normaux et abonnements
+    if(['tous','moi_s','moi_p'].includes(fa2)){
+      html += sec('👤 Moi','#185FA5', slot.itemsMoi.filter(i=>!isAbo(i)),'m');
+      html += sec('🔄 Abonnements','#185FA5', slot.itemsMoi.filter(isAbo),'m');
+    }
+    if(fa2==='moi_p'){
+      html += sec('💛 Partagés','#185FA5', slot.itemsPar.filter(i=>!isAbo(i)),'maPart');
+      html += sec('🔄 Abonnements partagés','#185FA5', slot.itemsPar.filter(isAbo),'maPart');
+    }
+    if(['tous','cop_s','cop_p'].includes(fa2)){
+      html += sec('💑 Copine','#854F0B', slot.itemsCop.filter(i=>!isAbo(i)),'m');
+      html += sec('🔄 Abonnements','#854F0B', slot.itemsCop.filter(isAbo),'m');
+    }
+    if(fa2==='cop_p'){
+      html += sec('💛 Partagés','#854F0B', slot.itemsPar.filter(i=>!isAbo(i)),'copPart');
+      html += sec('🔄 Abonnements partagés','#854F0B', slot.itemsPar.filter(isAbo),'copPart');
+    }
+    if(['tous','par'].includes(fa2)){
+      html += sec('🤝 Partagés','#27500A', slot.itemsPar.filter(i=>!isAbo(i)),'total');
+      html += sec('🔄 Abonnements partagés','#27500A', slot.itemsPar.filter(isAbo),'total');
+    }
     // Séparer achats normaux et abonnements (🔄)
     const isMoiAbo  = i => i.n && i.n.includes('🔄');
     const tAboMoi   = Math.round(slot.itemsMoi.filter(isMoiAbo).reduce((s,i)=>s+i.m,0)*100)/100;
@@ -1152,11 +1172,8 @@ function drawChart(){
     // Total achats sans abonnements
     const tAchat = Math.round((tAchatMoi + tAchatCop + tAchatPar)*100)/100;
  
-    html += '<div style="margin-top:8px;padding-top:6px;border-top:2px solid var(--border)">';
-    html += row('🛒 Total achats', tAchat, 'var(--text2)');
-    html += row('🔄 Total abonnements', tAbo, 'var(--text2)');
-    html += row('🤝 Total partagé', tPar, '#27500A');
     const grand = Math.round((tMs+tCs+tPar)*100)/100;
+    html += '<div style="margin-top:8px;padding-top:6px;border-top:2px solid var(--border)">';
     html += rowBold('💰 Total', grand);
     html += '</div>';
  
