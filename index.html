@@ -656,6 +656,7 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
     <div class="cbadges">${AB(r)}${SB2(c.st)}<span class="badge b-src">${r.source||'—'}</span></div>
     <div class="cgrid">
       <div><div class="cl">Total achat</div><div class="cv">${f(c.total)}</div></div>
+      <div><div class="cl">Déjà payé</div><div class="cv c-green">${f(c.deja)}</div></div>
       <div><div class="cl">Restant</div><div class="cv c-red">${f(c.restant)}</div></div>
       <div><div class="cl">Prochaine éch.</div><div class="cv">${fd(r.due)}</div></div>
       <div><div class="cl">Jours</div><div class="cv">${JT(c.j)}</div></div>
@@ -673,11 +674,11 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
 }).join('')}
 </div>
 <div class="twrap">
-${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
+${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Payé</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
 ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';return`<tr onclick="OE('${r.id}')">
   <td><div style="font-weight:500">${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
   <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
-  <td style="font-weight:600">${f(c.cv)}</td><td>${f(c.total)}</td>
+  <td style="font-weight:600">${f(c.cv)}</td><td style="font-weight:600;color:#276749">${f(c.deja)}</td><td>${f(c.total)}</td>
   <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
   <td style="font-weight:600" class="${c.restant>0?'c-red':'c-green'}">${f(c.restant)}</td>
   <td style="white-space:nowrap">${fdf(r.due)}</td><td>${JT(c.j)}</td><td>${SB2(c.st)}</td>
