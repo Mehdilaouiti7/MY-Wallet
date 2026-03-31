@@ -801,6 +801,37 @@ function SM(){
   return`<div class="overlay" onclick="if(event.target===this){G.sm=false;render()}"><div class="modal">
     <h2>⚙️ Réglages</h2>
     <div style="display:flex;flex-direction:column;gap:16px">
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Apparence</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;color:var(--text)">🌙 Mode sombre</span>
+          <button onclick="toggleDark()" style="padding:6px 16px;border-radius:20px;border:1px solid var(--border);background:${isDark?'#185FA5':'var(--card)'};color:${isDark?'#fff':'var(--text)'};font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+            ${isDark?'Activé ✓':'Désactivé'}
+          </button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Photo de fond (écran PIN)</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;touch-action:manipulation;white-space:nowrap">
+            🖼 Choisir une photo
+            <input type="file" accept="image/*" style="display:none" onchange="uploadBg(this)">
+          </label>
+          <button onclick="removeBg()" style="padding:7px 14px;border-radius:8px;border:1px solid #F09595;color:#A32D2D;background:var(--card);font-size:12px;cursor:pointer;font-family:inherit;touch-action:manipulation">Supprimer</button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Code PIN</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input id="np" type="tel" maxlength="4" placeholder="Nouveau PIN (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer le PIN</button>
+        </div>
+      </div>
+
+    </div>
     <div class="macts"><button class="btn" onclick="G.sm=false;render()">Fermer</button></div>
   </div></div>`;
 }
