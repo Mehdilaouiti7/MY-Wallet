@@ -149,6 +149,7 @@ function nextDueAfter(r,newPays){
 function calc(r){
   const rest=r.total_inst-r.pays;
   let total=0,deja=0,restant=0;
+  let futureCop=0;
   if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso.length){
     for(let i=0;i<r.total_inst;i++){
       const v=gv(r,i);
@@ -156,14 +157,17 @@ function calc(r){
       if(i<r.pays)deja+=v;
       else{
         restant+=v;
+        if(r.partage)futureCop+=gc(r,i);
       }
     }
   }else{
     const v=parseFloat(r.versement)||0;
     total=parseFloat(r.montant_total)||v*r.total_inst;
     deja=v*r.pays;restant=v*rest;
+    if(r.partage)futureCop=restant/2;
   }
-  const bal=r.partage?getCopCredit(r.id):0;
+  const hasSavedBal=r.partage&&Object.prototype.hasOwnProperty.call(G.cop_credit||{},r.id);
+  const bal=r.partage?(hasSavedBal?getCopCredit(r.id):futureCop):0;
   const pc2=Math.max(0,bal);
   const today=new Date();today.setHours(0,0,0,0);
   const due=new Date(r.due+'T12:00:00');
