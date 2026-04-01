@@ -12,13 +12,13 @@ Cette API:
 
 Variables d'environnement Vercel obligatoires
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (recommande) ou `SUPABASE_ANON_KEY`
 - `RESEND_API_KEY`
 - `REMINDER_FROM_EMAIL` (ex: `MY Wallet <onboarding@resend.dev>` ou domaine verifie)
 
 Variables optionnelles
 
+- `SUPABASE_URL` (sinon fallback integre)
+- `SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_ANON_KEY` (sinon fallback anon integre)
 - `REMINDER_TO_EMAIL` (force une adresse de destination fixe)
 - `ALLOW_ORIGIN` (sinon `*`)
 
@@ -42,8 +42,8 @@ Diagnostic email
 
 - Le bouton "Diagnostic email" dans l'app appelle `/api/email-status`.
 - Il verifie la presence des variables critiques:
-	- `SUPABASE_URL`
-	- `SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_ANON_KEY`
+	- `SUPABASE_URL` (ou fallback)
+	- `SUPABASE_SERVICE_ROLE_KEY` ou `SUPABASE_ANON_KEY` (ou fallback)
 	- `RESEND_API_KEY`
 	- `REMINDER_FROM_EMAIL`
 

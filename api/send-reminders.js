@@ -1,4 +1,6 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_SUPABASE_URL = 'https://mqfyuprpztiyfpleannt.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZnl1cHJwenRpeWZwbGVhbm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjg3MjUsImV4cCI6MjA4OTkwNDcyNX0.4Fvc-fNlwhVp0HvOEL-Z92i9W4YvVSAgen0ihBzlGOk';
 
 function getDateYmd(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -84,15 +86,15 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const sbUrl = process.env.SUPABASE_URL;
-    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const sbUrl = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
+    const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
     const resendApiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.REMINDER_FROM_EMAIL;
 
-    if (!sbUrl || !sbKey || !resendApiKey || !fromEmail) {
+    if (!resendApiKey || !fromEmail) {
       return res.status(500).json({
         ok: false,
-        error: 'Missing env vars. Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY), RESEND_API_KEY, REMINDER_FROM_EMAIL.'
+        error: 'Missing env vars. Required: RESEND_API_KEY, REMINDER_FROM_EMAIL. Optional overrides: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY.'
       });
     }
 

@@ -5,6 +5,9 @@ function mask(value, keepStart = 3, keepEnd = 2) {
   return `${s.slice(0, keepStart)}${'*'.repeat(s.length - keepStart - keepEnd)}${s.slice(-keepEnd)}`;
 }
 
+const DEFAULT_SUPABASE_URL = 'https://mqfyuprpztiyfpleannt.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZnl1cHJwenRpeWZwbGVhbm50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMjg3MjUsImV4cCI6MjA4OTkwNDcyNX0.4Fvc-fNlwhVp0HvOEL-Z92i9W4YvVSAgen0ihBzlGOk';
+
 function setCors(res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOW_ORIGIN || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -23,8 +26,8 @@ module.exports = async (req, res) => {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
 
-  const hasSupabaseUrl = Boolean(process.env.SUPABASE_URL);
-  const hasSupabaseKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY);
+  const hasSupabaseUrl = Boolean(process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL);
+  const hasSupabaseKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY);
   const hasResendKey = Boolean(process.env.RESEND_API_KEY);
   const hasFromEmail = Boolean(process.env.REMINDER_FROM_EMAIL);
 
@@ -39,7 +42,7 @@ module.exports = async (req, res) => {
       REMINDER_FROM_EMAIL: hasFromEmail
     },
     values: {
-      SUPABASE_URL: process.env.SUPABASE_URL || '',
+      SUPABASE_URL: process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL,
       REMINDER_FROM_EMAIL: process.env.REMINDER_FROM_EMAIL || '',
       REMINDER_TO_EMAIL: process.env.REMINDER_TO_EMAIL || '',
       RESEND_API_KEY_MASKED: mask(process.env.RESEND_API_KEY || '')
