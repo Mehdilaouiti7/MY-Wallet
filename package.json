@@ -1,0 +1,12 @@
+{
+  "name": "my-wallet",
+  "private": true,
+  "version": "1.0.0",
+  "description": "MY Wallet app with Vercel serverless reminders API",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check app.js && node --check api/send-reminders.js"
+  }
+}

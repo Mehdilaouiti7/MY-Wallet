@@ -912,9 +912,10 @@ function SM(){
           <input id="email-input" type="email" value="${G.email||''}" placeholder="ton@email.com" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
           <div style="display:flex;gap:6px">
             <button onclick="saveEmail()" class="btn btn-p" style="flex:1">💾 Enregistrer</button>
-            <button onclick="sendTestEmail()" class="btn" style="flex:1">🔔 Tester maintenant</button>
+            <button onclick="sendTestEmail()" class="btn" style="flex:1">🔔 Déclencher les rappels</button>
           </div>
-          <div style="font-size:11px;color:var(--text3)">Tu recevras un email 7 jours avant chaque échéance.</div>
+          <button onclick="checkEmailStatus()" class="btn" style="width:100%">🧪 Diagnostic email</button>
+          <div style="font-size:11px;color:var(--text3)">Tu recevras un email 7 jours avant chaque échéance. Le bouton déclenche les rappels côté serveur, mais il ne confirme pas la réception dans ta boîte mail.</div>
         </div>
       </div>
 
@@ -1544,7 +1545,7 @@ async function saveEmail(){
 
 async function sendTestEmail(){
   try{
-    T('Envoi en cours...');
+    T('Déclenchement des rappels...');
     const res = await fetch('/api/send-reminders', {
       method:'GET',
       headers:{Accept:'application/json'}
@@ -1553,9 +1554,36 @@ async function sendTestEmail(){
     if(!res.ok||!data?.ok){
       throw new Error(data?.error||'Erreur envoi email');
     }
-    T('✅ Email envoyé ! ('+(data.echeances||0)+' échéance(s))');
+    T('✅ Rappels déclenchés: '+(data.echeances||0)+' échéance(s)');
   }catch(error){
     T('❌ Envoi impossible: '+(error?.message||'erreur inconnue'));
+  }
+}
+
+async function checkEmailStatus(){
+  try{
+    T('Diagnostic en cours...');
+    const res = await fetch('/api/email-status', {
+      method:'GET',
+      headers:{Accept:'application/json'}
+    });
+    const data = await res.json();
+    if(!res.ok||!data?.checks){
+      throw new Error(data?.error||'Diagnostic indisponible');
+    }
+    const checks = data.checks;
+    const ok = checks.SUPABASE_URL && checks.SUPABASE_KEY && checks.RESEND_API_KEY && checks.REMINDER_FROM_EMAIL;
+    const msg = [
+      ok ? '✅ Config email OK' : '❌ Config email incomplète',
+      `SUPABASE_URL: ${checks.SUPABASE_URL?'OK':'KO'}`,
+      `SUPABASE_KEY: ${checks.SUPABASE_KEY?'OK':'KO'}`,
+      `RESEND_API_KEY: ${checks.RESEND_API_KEY?'OK':'KO'}`,
+      `REMINDER_FROM_EMAIL: ${checks.REMINDER_FROM_EMAIL?'OK':'KO'}`
+    ].join('\n');
+    alert(msg);
+    T(ok?'Diagnostic OK ✓':'Diagnostic: config incomplète');
+  }catch(error){
+    T('❌ Diagnostic impossible: '+(error?.message||'erreur inconnue'));
   }
 }
 
