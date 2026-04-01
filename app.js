@@ -756,6 +756,21 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 </div>`:''}
 ${G.tab==='archive'?renderArchives():''}
 ${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}`;
+  const _hasOverlay = !!(G.sm || G.eid !== null || G.pid);
+  if(_hasOverlay){
+    if(!document.body.classList.contains('modal-open')){
+      document.body._savedScrollY = window.scrollY;
+      document.body.style.top = `-${window.scrollY}px`;
+      document.body.classList.add('modal-open');
+    }
+  } else {
+    if(document.body.classList.contains('modal-open')){
+      const y = document.body._savedScrollY || 0;
+      document.body.classList.remove('modal-open');
+      document.body.style.top = '';
+      window.scrollTo(0, y);
+    }
+  }
   setTimeout(drawChart, 50);
   setTimeout(drawCategoryChart, 50);
 }

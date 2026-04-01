@@ -90,7 +90,8 @@ tr:hover td{background:var(--bg);cursor:pointer}
 .remb{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;font-family:inherit;white-space:nowrap;touch-action:manipulation}
 .remb-n{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
 .remb-o{background:#EAF3DE;color:#3B6D11;border-color:#97C459}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:1rem;overflow-y:auto}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:1rem;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+body.modal-open{overflow:hidden;position:fixed;width:100%;height:100%}
 .modal{background:var(--card);border-radius:16px;padding:1.4rem;width:100%;max-width:540px;border:1px solid var(--border);margin:auto}
 .modal h2{font-size:16px;font-weight:600;margin-bottom:1rem;color:var(--text)}
 .fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
