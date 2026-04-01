@@ -6,14 +6,18 @@ const SB = createClient(
 const SRC=['PayPal','Oney','Cofidis','Carte bancaire','Virement','Prélèvement','Autre'];
 
 // PIN
-let pv='', pc='0000';
+let pv='', pinMoi='0000', pinCop='0000';
 // Charger PIN et photo de fond au démarrage
 (async()=>{
-  const {data}=await SB.from('app_config').select('key,value').in('key',['pin','bg_photo']);
+  const {data}=await SB.from('app_config').select('key,value').in('key',['pin','pin_moi','pin_copine','bg_photo']);
   if(data){
     const pin=data.find(d=>d.key==='pin');
+    const pm=data.find(d=>d.key==='pin_moi');
+    const pcfg=data.find(d=>d.key==='pin_copine');
     const bg=data.find(d=>d.key==='bg_photo');
-    if(pin&&pin.value) pc=pin.value;
+    if(pm&&pm.value) pinMoi=pm.value;
+    if(pcfg&&pcfg.value) pinCop=pcfg.value;
+    if(pin&&pin.value&&!pm&&!pcfg){pinMoi=pin.value;pinCop=pin.value;}
     if(bg&&bg.value) applyBg(bg.value);
   }
 })();
@@ -54,10 +58,24 @@ document.addEventListener('DOMContentLoaded', function() {
   pad.addEventListener('click', handlePin);
 });
 function PR(){for(let i=0;i<4;i++)document.getElementById('pd'+i).className='pin-dot'+(i<pv.length?' on':'');}
+function roleForPin(code){
+  if(code===pinMoi)return 'Moi';
+  if(code===pinCop)return 'Copine';
+  return null;
+}
 async function PC(){
-  const {data}=await SB.from('app_config').select('value').eq('key','pin').single();
-  if(data&&data.value)pc=data.value;
-  if(pv===pc){
+  const {data}=await SB.from('app_config').select('key,value').in('key',['pin','pin_moi','pin_copine']);
+  if(data){
+    const p=data.find(d=>d.key==='pin');
+    const pm=data.find(d=>d.key==='pin_moi');
+    const pcfg=data.find(d=>d.key==='pin_copine');
+    if(pm&&pm.value)pinMoi=pm.value;
+    if(pcfg&&pcfg.value)pinCop=pcfg.value;
+    if(p&&p.value&&!pm&&!pcfg){pinMoi=p.value;pinCop=p.value;}
+  }
+  const role=roleForPin(pv);
+  if(role){
+    G.user_role=role;
     document.getElementById('pin-screen').style.display='none';
     document.getElementById('app').style.display='block';
     AI();
@@ -69,7 +87,25 @@ async function PC(){
 
 // STATE
 
-let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+
+async function loadLogs(){
+  if(G.user_role!=='Moi'){G.logs=[];return;}
+  const {data,error}=await SB.from('payment_logs').select('*').order('created_at',{ascending:false}).limit(200);
+  if(error){G.logs=[];return;}
+  G.logs=data||[];
+}
+async function logPayment({actionType,marchand,echeanceId,amount,note}){
+  const row={
+    actor:G.user_role||'Moi',
+    action_type:actionType,
+    marchand:marchand||'',
+    echeance_id:echeanceId||null,
+    amount:Math.round((parseFloat(amount)||0)*100)/100,
+    note:note||''
+  };
+  await SB.from('payment_logs').insert(row);
+}
 
 function getCopCredit(id){
   return parseFloat((G.cop_credit||{})[id]||0);
@@ -105,6 +141,7 @@ async function LD(){
 
 async function AI(){
   await LD();
+  await loadLogs();
   render();
 }
 
@@ -636,7 +673,7 @@ function render(){
   const nSo=G.rows.filter(r=>calc(r).st==='soldé').length;
 
   document.getElementById('app').innerHTML=`
-<div class="topbar"><h1>MY <span>Wallet</span> 💛</h1><div class="topbar-r"><button class="btn" onclick="exportPDF()" title="Export PDF" style="padding:6px 10px">📄</button><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
+<div class="topbar"><h1>MY <span>Wallet</span> 💛 <span style="font-size:11px;color:var(--text3)">(${G.user_role||'Moi'})</span></h1><div class="topbar-r">${G.user_role==='Moi'?'<button class="btn" onclick="openLogs()" title="Historique paiements" style="padding:6px 10px">📜</button>':''}<button class="btn" onclick="exportPDF()" title="Export PDF" style="padding:6px 10px">📄</button><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
   <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
@@ -755,7 +792,7 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 </tbody></table>`}
 </div>
 ${G.tab==='archive'?renderArchives():''}
-${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}`;
+${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}${G.lm?LM():''}`;
   setTimeout(drawChart, 50);
   setTimeout(drawCategoryChart, 50);
 }
@@ -909,6 +946,31 @@ function UPS(){
   document.getElementById('ps').innerHTML=h;
 }
 
+async function openLogs(){
+  if(G.user_role!=='Moi')return;
+  await loadLogs();
+  G.lm=true;
+  render();
+}
+function LM(){
+  if(G.user_role!=='Moi')return '';
+  return `<div class="overlay" onclick="if(event.target===this){G.lm=false;render()}"><div class="modal modal-settings">
+    <h2>📜 Historique des paiements</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto">
+      ${(G.logs||[]).length===0?'<div class="empty" style="padding:1rem">Aucun log pour le moment</div>':G.logs.map(l=>`<div class="s-card" style="padding:.75rem">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${l.actor||'—'} • ${l.action_type||'paiement'}</div>
+          <div style="font-size:11px;color:var(--text3)">${l.created_at?new Date(l.created_at).toLocaleString('fr-FR'):'—'}</div>
+        </div>
+        <div style="margin-top:4px;font-size:13px;color:var(--text)">${l.marchand||'—'}</div>
+        <div style="margin-top:2px;font-size:12px;color:#185FA5;font-weight:600">${f(l.amount||0)}</div>
+        ${l.note?`<div style="margin-top:4px;font-size:11px;color:var(--text3)">${l.note}</div>`:''}
+      </div>`).join('')}
+    </div>
+    <div class="macts"><button class="btn" onclick="G.lm=false;render()">Fermer</button></div>
+  </div></div>`;
+}
+
 function salaireWidget(){
   // Calculer les charges fixes du mois courant
   const now = new Date();
@@ -1004,13 +1066,14 @@ function SM(){
         </div>
       </div>
 
-      <div class="s-card">
-        <div class="s-head">Code PIN</div>
+      ${G.user_role==='Moi'?`<div class="s-card">
+        <div class="s-head">Codes PIN (Moi / Copine)</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <input id="np" type="tel" maxlength="4" placeholder="Nouveau PIN (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
-          <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer le PIN</button>
+          <input id="np-m" type="tel" maxlength="4" placeholder="PIN Moi (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <input id="np-c" type="tel" maxlength="4" placeholder="PIN Copine (4 chiffres)" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <button onclick="SPC()" class="btn btn-p" style="align-self:flex-end">Enregistrer les PIN</button>
         </div>
-      </div>
+      </div>`:''}
 
     </div>
     <div class="macts"><button class="btn" onclick="G.sm=false;render()">Fermer</button></div>
@@ -1111,6 +1174,8 @@ async function CP(id){
       if(amt<=0){T('Rien à rembourser');return;}
       setCopCredit(id,bal-amt);
       await saveCopCredit();
+      await logPayment({actionType:'copine_rembourse',marchand:r.marchand,echeanceId:id,amount:amt,note:mode==='all'?'Remboursement total':'Remboursement partiel'});
+      await loadLogs();
       G.pid=null;render();T(`💑 Remboursé : ${f(amt)}`);
       return;
     } else {
@@ -1119,38 +1184,54 @@ async function CP(id){
       const np=Math.min(r.total_inst,r.pays+nb);
       const nd=nextDueAfter(r,np);
       const copAdd=sumCopShares(r,r.pays,np-r.pays);
+      const totalPaid=sumInstAmounts(r,r.pays,np-r.pays);
       u={last_paid_date:today,pays:np};
       if(nd)u.due=nd;
       setCopCredit(id,bal+copAdd);
       await SB.from('echeances').update(u).eq('id',id);
       await saveCopCredit();
+      await logPayment({actionType:'paiement_partage',marchand:r.marchand,echeanceId:id,amount:totalPaid,note:`${np-r.pays} échéance(s) payée(s)`});
       await LD();G.pid=null;render();
       T(nd?`Payé ✓ — Prochaine : ${fd(nd)}`:'Payé ✓ — Achat soldé');
       return;
     }
   } else {
     const pt=document.querySelector('input[name="pt"]:checked')?.value||'ech';
+    let amount=0;
+    let paidCount=0;
     if(pt==='tot'){
       u={last_paid_date:today,pays:r.total_inst};
+      amount=c.restant;
+      paidCount=r.total_inst-r.pays;
     }else{
       const nb=parseInt(document.getElementById('nnb')?.value)||1;
       const np=Math.min(r.total_inst,r.pays+nb);
       const nd=nextDueAfter(r,np);
       u={last_paid_date:today,pays:np};
       if(nd)u.due=nd;
+      amount=sumInstAmounts(r,r.pays,np-r.pays);
+      paidCount=np-r.pays;
     }
+    await logPayment({actionType:'paiement',marchand:r.marchand,echeanceId:id,amount,note:`${paidCount} échéance(s) payée(s)`});
   }
 
   await SB.from('echeances').update(u).eq('id',id);
+  await loadLogs();
   await LD();G.pid=null;render();
   T(u.due?`Payé ✓ — Prochaine : ${fd(u.due)}`:'Payé ✓ — Achat soldé');
 }
 
 async function SPC(){
-  const v=document.getElementById('np').value.trim();
-  if(!/^\d{4}$/.test(v)){alert('4 chiffres requis');return;}
-  await SB.from('app_config').upsert({key:'pin',value:v});
-  pc=v;G.pm=false;render();T('PIN mis à jour ✓');
+  if(G.user_role!=='Moi'){alert('Action réservée à Moi');return;}
+  const vm=document.getElementById('np-m')?.value.trim();
+  const vc=document.getElementById('np-c')?.value.trim();
+  if(!/^\d{4}$/.test(vm)||!/^\d{4}$/.test(vc)){alert('2 PIN de 4 chiffres requis');return;}
+  await SB.from('app_config').upsert([
+    {key:'pin_moi',value:vm},
+    {key:'pin_copine',value:vc}
+  ]);
+  pinMoi=vm;pinCop=vc;
+  render();T('PIN Moi/Copine mis à jour ✓');
 }
 
 function T(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
