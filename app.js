@@ -69,17 +69,29 @@ async function PC(){
 
 // STATE
 
-let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+
+function getCopCredit(id){
+  return parseFloat((G.cop_credit||{})[id]||0);
+}
+function setCopCredit(id,val){
+  if(!G.cop_credit)G.cop_credit={};
+  G.cop_credit[id]=Math.round((parseFloat(val)||0)*100)/100;
+}
+async function saveCopCredit(){
+  await SB.from('app_config').upsert({key:'cop_credit_map',value:JSON.stringify(G.cop_credit||{})});
+}
 
 
 async function LD(){
-  const [{data:d1,error:e1},{data:d2},{data:d3},{data:d4},{data:d5},{data:d6}]=await Promise.all([
+  const [{data:d1,error:e1},{data:d2},{data:d3},{data:d4},{data:d5},{data:d6},{data:d7}]=await Promise.all([
     SB.from('echeances').select('*').eq('archive',false).order('due'),
     SB.from('abonnements').select('*').order('nom'),
     SB.from('categories').select('*').order('nom'),
     SB.from('app_config').select('key,value').eq('key','salaire_brut').single(),
     SB.from('echeances').select('*').eq('archive',true).order('created_at',{ascending:false}),
-    SB.from('app_config').select('key,value').eq('key','email_rappel').single()
+    SB.from('app_config').select('key,value').eq('key','email_rappel').single(),
+    SB.from('app_config').select('key,value').eq('key','cop_credit_map').single()
   ]);
   if(e1){T('Erreur: '+e1.message);return;}
   G.rows=d1||[];
@@ -88,6 +100,7 @@ async function LD(){
   G.salaire=parseFloat(d4?.value||0);
   G.archive_rows=d5||[];
   G.email=d6?.value||'';
+  try{G.cop_credit=d7?.value?JSON.parse(d7.value):{};}catch(e){G.cop_credit={};}
 }
 
 async function AI(){
@@ -115,20 +128,43 @@ function gc(r,i){
     return parseFloat(r.versements_perso[i].copine_montant);
   return v/2;
 }
+function sumInstAmounts(r,start,count){
+  let t=0;
+  const end=Math.min(r.total_inst,start+count);
+  for(let i=start;i<end;i++)t+=gv(r,i);
+  return Math.round(t*100)/100;
+}
+function sumCopShares(r,start,count){
+  let t=0;
+  const end=Math.min(r.total_inst,start+count);
+  for(let i=start;i<end;i++)t+=gc(r,i);
+  return Math.round(t*100)/100;
+}
+function nextDueAfter(r,newPays){
+  if(newPays>=r.total_inst)return null;
+  const d=new Date(r.due+'T12:00:00');
+  d.setMonth(d.getMonth()+(newPays-r.pays));
+  return d.toISOString().split('T')[0];
+}
 function calc(r){
   const rest=r.total_inst-r.pays;
-  let total=0,deja=0,restant=0,pc2=0;
+  let total=0,deja=0,restant=0;
   if(r.versement_type==='perso'&&r.versements_perso&&r.versements_perso.length){
-    for(let i=0;i<r.total_inst;i++){const v=gv(r,i);total+=v;if(i<r.pays)deja+=v;else{restant+=v;if(r.partage&&!r.rembourse)pc2+=gc(r,i);}}
+    for(let i=0;i<r.total_inst;i++){
+      const v=gv(r,i);
+      total+=v;
+      if(i<r.pays)deja+=v;
+      else{
+        restant+=v;
+      }
+    }
   }else{
     const v=parseFloat(r.versement)||0;
     total=parseFloat(r.montant_total)||v*r.total_inst;
     deja=v*r.pays;restant=v*rest;
-    if(r.partage&&!r.rembourse){
-      if(r.partage_type==='perso'&&r.versements_perso){for(let i=r.pays;i<r.total_inst;i++)pc2+=gc(r,i);}
-      else pc2=restant/2;
-    }
   }
+  const bal=r.partage?getCopCredit(r.id):0;
+  const pc2=Math.max(0,bal);
   const today=new Date();today.setHours(0,0,0,0);
   const due=new Date(r.due+'T12:00:00');
   const j=Math.round((due-today)/86400000);
@@ -137,9 +173,10 @@ function calc(r){
   const nk=new Date().getMonth()+'-'+new Date().getFullYear();
   const lk=lp?(lp.getMonth()+'-'+lp.getFullYear()):'';
   const pd2=(lk===nk)||rest===0;
-  // La copine peut marquer sa part comme remboursée si achat partagé et pas encore remboursé
-  const pdCop = !r.partage || r.rembourse || rest===0;
-  return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,pdCop,cv:gv(r,r.pays),cc:gc(r,r.pays)};
+  const pdCop = !r.partage || pc2<=0 || rest===0;
+  const nextCopPart = rest>0?gc(r,r.pays):0;
+  const cc = r.partage?nextCopPart:0;
+  return{rest,total,deja,restant,pc:pc2,j,st,pd:pd2,pdCop,cv:gv(r,r.pays),cc};
 }
 
 function aboForMonth(y,m){
@@ -684,7 +721,7 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
       <div><div class="cl">Total achat</div><div class="cv">${f(c.total)}</div></div>
       <div><div class="cl">Déjà payé</div><div class="cv c-green">${f(c.deja)}</div></div>
       <div><div class="cl">Restant</div><div class="cv c-red">${f(c.restant)}</div></div>
-      <div><div class="cl">Prochaine éch.</div><div class="cv">${fd(r.due)}</div></div>
+      <div><div class="cl">Prochaine éch.</div><div class="cv">${c.rest===0?'—':fd(r.due)}</div></div>
       <div><div class="cl">Jours</div><div class="cv">${JT(c.j)}</div></div>
     </div>
     <div style="margin-bottom:8px">
@@ -693,7 +730,7 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
     </div>
     <div class="ca" onclick="event.stopPropagation()">
       <button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓ Payé':'💳 Payer'}</button>
-      ${r.partage?`<button class="remb ${r.rembourse?'remb-o':'remb-n'}" onclick="TR('${r.id}',${r.rembourse})">${r.rembourse?'✓ Remb.':'⏳ Non remb.'}</button>`:''}
+      ${r.partage?`<button class="remb ${c.pdCop?'remb-o':'remb-n'}" onclick="TR('${r.id}',${c.pdCop})">${c.pdCop?'✓ Remb.':'⏳ Non remb.'}</button>`:''}
       <button class="btn btn-sm btn-d" onclick="DR('${r.id}')">Suppr.</button>
     </div>
   </div>`;
@@ -707,8 +744,8 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
   <td style="font-weight:600;white-space:nowrap">${f(c.cv)}</td><td style="font-weight:600;color:#276749;white-space:nowrap">${f(c.deja)}</td><td style="white-space:nowrap">${f(c.total)}</td>
   <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
   <td style="font-weight:600;white-space:nowrap" class="${c.restant>0?'c-red':'c-green'}">${f(c.restant)}</td>
-  <td style="white-space:nowrap">${fdf(r.due)}</td><td>${JT(c.j)}</td><td>${SB2(c.st)}</td>
-  <td>${r.partage?`<button class="remb ${r.rembourse?'remb-o':'remb-n'}" onclick="event.stopPropagation();TR('${r.id}',${r.rembourse})">${r.rembourse?'✓':'⏳'}</button>`:'—'}</td>
+  <td style="white-space:nowrap">${c.rest===0?'—':fdf(r.due)}</td><td>${JT(c.j)}</td><td>${SB2(c.st)}</td>
+  <td>${r.partage?`<button class="remb ${c.pdCop?'remb-o':'remb-n'}" onclick="event.stopPropagation();TR('${r.id}',${c.pdCop})">${c.pdCop?'✓':'⏳'}</button>`:'—'}</td>
   <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px"><button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓':'💳'}</button><button class="btn btn-sm btn-d" onclick="DR('${r.id}')">✕</button></div></td>
 </tr>`;}).join('')}
 </tbody></table>`}
@@ -795,15 +832,32 @@ function RVP(){
 function PM(){
   const r=G.rows.find(x=>x.id===G.pid);if(!r)return'';
   const c=calc(r);
+  const rest=Math.max(0,r.total_inst-r.pays);
   return`<div class="overlay" onclick="if(event.target===this){G.pid=null;render()}"><div class="modal">
     <h2>💳 Payer — ${r.marchand}</h2>
 
     ${r.partage?`<div class="psec"><h3>👤 Qui paie ?</h3>
-      <div class="popt"><input type="radio" name="qui" id="qui1" value="moi" ${!c.pd?'checked':''} onchange="UPS()" ${c.pd?'disabled':''}><label for="qui1" style="${c.pd?'opacity:.4':''}">Moi — payer un versement <b>${f(c.cv)}</b>${c.pd?'<br><small style="color:#a0aec0">Déjà payé ce mois</small>':''}</label></div>
-      <div class="popt"><input type="radio" name="qui" id="qui2" value="cop" onchange="UPS()" ${r.rembourse||c.st==='soldé'?'disabled':''}><label for="qui2" style="${r.rembourse||c.st==='soldé'?'opacity:.4':''}">💑 Copine — rembourser sa part <b>${f(c.cc)}</b>${r.rembourse?'<br><small style="color:#a0aec0">Déjà remboursée ✓</small>':c.pd?'<br><small style="color:#718096">En attente de remboursement</small>':''}</label></div>
+      <div class="popt"><input type="radio" name="qui" id="qui1" value="moi" ${!c.pd?'checked':''} onchange="UPS()" ${c.pd?'disabled':''}><label for="qui1" style="${c.pd?'opacity:.4':''}">Moi — payer une ou plusieurs échéances${c.pd?'<br><small style="color:#a0aec0">Déjà payé ce mois</small>':''}</label></div>
+      <div class="popt"><input type="radio" name="qui" id="qui2" value="cop" onchange="UPS()" ${c.st==='soldé'?'disabled':''}><label for="qui2" style="${c.st==='soldé'?'opacity:.4':''}">💑 Copine — ${c.pc>0?`rembourser <b>${f(c.cc)}</b> ou le total <b>${f(c.pc)}</b>`:'pré-payer ses prochaines parts'}</label></div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-size:12px;color:#718096">Échéances à payer (Moi) :</span>
+        <select id="qnb" onchange="UPS()" ${c.pd?'disabled':''} style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px">
+          ${Array.from({length:rest},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">
+        <label style="font-size:12px;color:#718096"><input type="radio" name="cpay" value="one" checked onchange="UPS()"> Copine paie une part (${f(c.cc)})</label>
+        <label style="font-size:12px;color:#718096"><input type="radio" name="cpay" value="all" onchange="UPS()"> Copine paie tout le restant (${f(sumCopShares(r,r.pays,rest))})</label>
+      </div>
     </div>`:`<div class="psec"><h3>Que voulez-vous payer ?</h3>
-      <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="UPS()"><label for="pt1">Payer la prochaine échéance <b>${f(c.cv)}</b><br><small style="color:#718096">→ Prochaine éch. : ${fd(addM(r.due))}</small></label></div>
+      <div class="popt"><input type="radio" name="pt" id="pt1" value="ech" checked onchange="UPS()"><label for="pt1">Payer des échéances <b>${f(c.cv)}</b><br><small style="color:#718096">${rest>1?`Tu peux en payer plusieurs d'un coup`:'Dernière échéance, pas de prochaine date'}</small></label></div>
       <div class="popt"><input type="radio" name="pt" id="pt2" value="tot" onchange="UPS()"><label for="pt2">Solder le reste complet <b>${f(c.restant)}</b></label></div>
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-size:12px;color:#718096">Nombre d'échéances :</span>
+        <select id="nnb" onchange="UPS()" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px">
+          ${Array.from({length:rest},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}
+        </select>
+      </div>
     </div>`}
 
     ${!r.partage?`<div class="psum" id="ps"></div>`:`<div class="psum" id="ps"></div>`}
@@ -816,19 +870,36 @@ function UPS(){
   const c=calc(r);
   let h='';
   if(r.partage){
+    const bal=getCopCredit(r.id);
+    const rest=Math.max(0,r.total_inst-r.pays);
+    const totalFuture=sumCopShares(r,r.pays,rest);
     const qui=document.querySelector('input[name="qui"]:checked')?.value||'moi';
     if(qui==='cop'){
-      h+=`<div class="psr"><span>💑 Part copine</span><span>${f(c.cc)}</span></div>`;
-      h+=`<div class="psr tot"><span>Copine débourse</span><span class="c-amber">${f(c.cc)}</span></div>`;
+      const mode=document.querySelector('input[name="cpay"]:checked')?.value||'one';
+      const one=(bal>0?Math.min(c.cc,bal):c.cc);
+      const all=(bal>0?bal:Math.max(0,totalFuture+bal));
+      const amt=Math.max(0,mode==='all'?all:one);
+      const nextBal=bal-amt;
+      h+=`<div class="psr"><span>Paiement copine</span><span>${f(amt)}</span></div>`;
+      h+=`<div class="psr"><span>À récupérer après</span><span>${f(Math.max(0,nextBal))}</span></div>`;
+      h+=`<div class="psr tot"><span>Copine débourse</span><span class="c-amber">${f(amt)}</span></div>`;
     } else {
-      h+=`<div class="psr"><span>Versement total</span><span>${f(c.cv)}</span></div>`;
-      h+=`<div class="psr"><span>Part copine (à récup.)</span><span>${f(c.cc)}</span></div>`;
-      h+=`<div class="psr tot"><span>Je débourse</span><span class="c-green">${f(c.cv-c.cc)}</span></div>`;
+      const nb=parseInt(document.getElementById('qnb')?.value)||1;
+      const total=sumInstAmounts(r,r.pays,nb);
+      const cop=sumCopShares(r,r.pays,nb);
+      h+=`<div class="psr"><span>Versements payés (${nb})</span><span>${f(total)}</span></div>`;
+      h+=`<div class="psr"><span>Part copine ajoutée à récupérer</span><span>${f(cop)}</span></div>`;
+      h+=`<div class="psr"><span>À récupérer total après paiement</span><span>${f(Math.max(0,bal+cop))}</span></div>`;
+      h+=`<div class="psr tot"><span>Je débourse maintenant</span><span class="c-green">${f(total)}</span></div>`;
     }
   } else {
     const pt=document.querySelector('input[name="pt"]:checked')?.value||'ech';
-    const m=pt==='tot'?c.restant:c.cv;
+    const nb=parseInt(document.getElementById('nnb')?.value)||1;
+    const m=pt==='tot'?c.restant:sumInstAmounts(r,r.pays,nb);
+    const np=pt==='tot'?r.total_inst:Math.min(r.total_inst,r.pays+nb);
+    const nd=nextDueAfter(r,np);
     h+=`<div class="psr"><span>Montant</span><span>${f(m)}</span></div>`;
+    h+=`<div class="psr"><span>Prochaine échéance</span><span>${nd?fd(nd):'Aucune (soldé)'}</span></div>`;
     h+=`<div class="psr tot"><span>Je débourse</span><span class="c-green">${f(m)}</span></div>`;
   }
   document.getElementById('ps').innerHTML=h;
@@ -945,7 +1016,20 @@ function SM(){
 function OE(id){G.eid=id||'new';render();}
 function OP(id){G.pid=id;render();setTimeout(UPS,50);}
 
-async function TR(id,cur){await SB.from('echeances').update({rembourse:!cur}).eq('id',id);await LD();render();T(!cur?'✓ Remboursé':'Annulé');}
+async function TR(id,cur){
+  const r=G.rows.find(x=>x.id===id);if(!r||!r.partage)return;
+  const c=calc(r);
+  if(cur){
+    setCopCredit(id,c.cc);
+    await saveCopCredit();
+    T('⏳ Marqué non remboursé');
+  }else{
+    setCopCredit(id,0);
+    await saveCopCredit();
+    T('✓ Marqué remboursé');
+  }
+  render();
+}
 async function DR(id){
   if(!confirm('Archiver ou supprimer définitivement ?')) return;
   // On archive plutôt que supprimer
@@ -1007,29 +1091,55 @@ async function SR(id){
 async function CP(id){
   const r=G.rows.find(x=>x.id===id);if(!r)return;
   const today=new Date().toISOString().split('T')[0];
+  const c=calc(r);
   let u={};
 
   if(r.partage){
+    const bal=getCopCredit(id);
+    const rest=Math.max(0,r.total_inst-r.pays);
+    const totalFuture=sumCopShares(r,r.pays,rest);
     const qui=document.querySelector('input[name="qui"]:checked')?.value||'moi';
     if(qui==='cop'){
-      // Copine confirme qu'elle a remboursé sa part
-      u={rembourse:true};
-      await SB.from('echeances').update(u).eq('id',id);
-      await LD();G.pid=null;render();T('💑 Part copine remboursée ✓');
+      const mode=document.querySelector('input[name="cpay"]:checked')?.value||'one';
+      const one=(bal>0?Math.min(c.cc,bal):c.cc);
+      const all=(bal>0?bal:Math.max(0,totalFuture+bal));
+      const amt=Math.max(0,mode==='all'?all:one);
+      if(amt<=0){T('Rien à rembourser');return;}
+      setCopCredit(id,bal-amt);
+      await saveCopCredit();
+      G.pid=null;render();T(`💑 Remboursé : ${f(amt)}`);
       return;
     } else {
-      // Moi je paie le versement → rembourse redevient false pour le prochain mois
-      u={last_paid_date:today,pays:r.pays+1,due:addM(r.due),rembourse:false};
+      if(c.pd){alert('Tu as déjà payé ce mois-ci.');return;}
+      const nb=parseInt(document.getElementById('qnb')?.value)||1;
+      const np=Math.min(r.total_inst,r.pays+nb);
+      const nd=nextDueAfter(r,np);
+      const copAdd=sumCopShares(r,r.pays,np-r.pays);
+      u={last_paid_date:today,pays:np};
+      if(nd)u.due=nd;
+      setCopCredit(id,bal+copAdd);
+      await SB.from('echeances').update(u).eq('id',id);
+      await saveCopCredit();
+      await LD();G.pid=null;render();
+      T(nd?`Payé ✓ — Prochaine : ${fd(nd)}`:'Payé ✓ — Achat soldé');
+      return;
     }
   } else {
     const pt=document.querySelector('input[name="pt"]:checked')?.value||'ech';
-    u={last_paid_date:today};
-    if(pt==='tot'){u.pays=r.total_inst;}
-    else{u.pays=r.pays+1;u.due=addM(r.due);}
+    if(pt==='tot'){
+      u={last_paid_date:today,pays:r.total_inst};
+    }else{
+      const nb=parseInt(document.getElementById('nnb')?.value)||1;
+      const np=Math.min(r.total_inst,r.pays+nb);
+      const nd=nextDueAfter(r,np);
+      u={last_paid_date:today,pays:np};
+      if(nd)u.due=nd;
+    }
   }
 
   await SB.from('echeances').update(u).eq('id',id);
-  await LD();G.pid=null;render();T('Payé ✓ — Prochaine : '+fd(u.due||r.due));
+  await LD();G.pid=null;render();
+  T(u.due?`Payé ✓ — Prochaine : ${fd(u.due)}`:'Payé ✓ — Achat soldé');
 }
 
 async function SPC(){
