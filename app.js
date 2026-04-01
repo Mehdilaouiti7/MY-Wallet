@@ -89,6 +89,11 @@ async function LD(){
   G.email=d6?.value||'';
 }
 
+async function AI(){
+  await LD();
+  render();
+}
+
 function f(n){return Number(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';}
 function addM(s){const d=new Date(s+'T12:00:00');d.setMonth(d.getMonth()+1);return d.toISOString().split('T')[0];}
 function fd(s){return new Date(s+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});}
