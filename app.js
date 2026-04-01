@@ -69,7 +69,7 @@ async function PC(){
 
 // STATE
 
-let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null},show_calc:true,show_salaire:true,show_cats:true,show_email:true};
 
 async function LD(){
   const [{data:d1,error:e1},{data:d2},{data:d3},{data:d4},{data:d5},{data:d6}]=await Promise.all([
@@ -625,14 +625,21 @@ function render(){
   <canvas id="chart-mois" height="200"></canvas>
   <div id="chart-detail" style="display:none;margin-top:10px;background:var(--bg);border-radius:8px;padding:10px;font-size:12px"></div>
 </div>
-${alertSection()}${salaireWidget()}${calSection()}${MB(0)}
+<div class="chart-box">
+  <h3 style="margin-bottom:1rem">🏷️ Dépenses par catégorie</h3>
+  <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
+    <canvas id="chart-cat" height="150" width="150" style="max-width:200px"></canvas>
+    <div id="cat-legend" style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
+${alertSection()}${G.show_salaire?salaireWidget():''}${calSection()}${MB(0)}
 ${MB(1)}
 
-${previsionAnnuelle()}<div class="sg">
+${previsionAnnuelle()}${G.show_calc?`<div class="sg">
   <div class="sc"><h3 class="c-blue">👤 Moi (solo)</h3><div class="sr"><span>Total</span><span>${f(sm.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sm.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sm.r)}</span></div></div>
   <div class="sc"><h3 class="c-amber">💑 Copine (solo)</h3><div class="sr"><span>Total</span><span>${f(sc.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sc.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sc.r)}</span></div></div>
   <div class="sc"><h3 style="color:#27500A">🤝 Partagés</h3><div class="sr"><span>Total</span><span>${f(sp.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sp.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sp.r)}</span></div><div class="sr" style="border-top:1px solid #f0f4f8;margin-top:4px;padding-top:4px"><span>À récupérer</span><span class="c-purple">${f(sp.a)}</span></div></div>
-</div>${aboSection()}
+</div>`:''}<br>${aboSection()}
 <div class="tabs">
   <button class="tab ${G.tab==='all'?'on':''}" onclick="G.tab='all';render()">En cours (${nEn})</button>
   <button class="tab ${G.tab==='upcoming'?'on':''}" onclick="G.tab='upcoming';render()">À venir</button>
@@ -666,8 +673,9 @@ ${previsionAnnuelle()}<div class="sg">
 ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
   const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);
   const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';
+  const catIcon = r.categorie ? G.cats.find(c=>c.nom===r.categorie)?.icon || '' : '';
   return`<div class="card" onclick="OE('${r.id}')">
-    <div class="ch"><div><div class="ctitle">${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
+    <div class="ch"><div><div class="ctitle">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
       <div style="text-align:right"><div style="font-size:15px;font-weight:700" class="c-blue">${f(c.cv)}</div><div style="font-size:10px;color:#a0aec0">/versement</div></div>
     </div>
     <div class="cbadges">${AB(r)}${SB2(c.st)}<span class="badge b-src">${r.source||'—'}</span></div>
@@ -692,8 +700,8 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
 </div>
 <div class="twrap">
 ${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Payé</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
-${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';return`<tr onclick="OE('${r.id}')">
-  <td><div style="font-weight:500">${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
+${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';const catIcon = r.categorie ? G.cats.find(cat=>cat.nom===r.categorie)?.icon || '' : '';return`<tr onclick="OE('${r.id}')">
+  <td><div style="font-weight:500">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
   <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
   <td style="font-weight:600;white-space:nowrap">${f(c.cv)}</td><td style="font-weight:600;color:#276749;white-space:nowrap">${f(c.deja)}</td><td style="white-space:nowrap">${f(c.total)}</td>
   <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
@@ -707,6 +715,7 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 ${G.tab==='archive'?renderArchives():''}
 ${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}`;
   setTimeout(drawChart, 50);
+  setTimeout(drawCategoryChart, 50);
 }
 
 function EM(){
@@ -862,6 +871,36 @@ function SM(){
     <div style="display:flex;flex-direction:column;gap:16px">
 
       <div style="background:var(--bg);border-radius:10px;padding:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">👁️ Affichage des sections</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--text)">📊 Résumé (Moi/Copine/Partagés)</span>
+            <button onclick="G.show_calc=!G.show_calc;render()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${G.show_calc?'#185FA5':'var(--card)'};color:${G.show_calc?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+              ${G.show_calc?'Visible':'Masqué'}
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--text)">💶 Salaire brut</span>
+            <button onclick="G.show_salaire=!G.show_salaire;render()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${G.show_salaire?'#185FA5':'var(--card)'};color:${G.show_salaire?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+              ${G.show_salaire?'Visible':'Masqué'}
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--text)">🏷️ Catégories</span>
+            <button onclick="G.show_cats=!G.show_cats;render()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${G.show_cats?'#185FA5':'var(--card)'};color:${G.show_cats?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+              ${G.show_cats?'Visible':'Masqué'}
+            </button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--text)">🔔 Rappels email</span>
+            <button onclick="G.show_email=!G.show_email;render()" style="padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:${G.show_email?'#185FA5':'var(--card)'};color:${G.show_email?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
+              ${G.show_email?'Visible':'Masqué'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg);border-radius:10px;padding:1rem">
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Apparence</div>
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="font-size:13px;color:var(--text)">🌙 Mode sombre</span>
@@ -891,7 +930,7 @@ function SM(){
         ${G.salaire>0?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Net estimé (~77%) : <strong style="color:#276749">${f(Math.round(G.salaire*0.77*100)/100)}</strong></div>`:''}
       </div>
 
-      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+      ${G.show_cats?`<div style="background:var(--bg);border-radius:10px;padding:1rem">
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">🏷️ Catégories</div>
         <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px;max-height:180px;overflow-y:auto">
           ${G.cats.map(cat=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
@@ -904,9 +943,9 @@ function SM(){
           <input id="cat-nom" placeholder="Nom de la catégorie" style="flex:1;min-width:100px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
           <button onclick="addCat()" class="btn btn-p" style="white-space:nowrap">+ Ajouter</button>
         </div>
-      </div>
+      </div>`:''}
 
-      <div style="background:var(--bg);border-radius:10px;padding:1rem">
+      ${G.show_email?`<div style="background:var(--bg);border-radius:10px;padding:1rem">
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">🔔 Rappels par email</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <input id="email-input" type="email" value="${G.email||''}" placeholder="ton@email.com" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
@@ -917,7 +956,7 @@ function SM(){
           <button onclick="checkEmailStatus()" class="btn" style="width:100%">🧪 Diagnostic email</button>
           <div style="font-size:11px;color:var(--text3)">Tu recevras un email 7 jours avant chaque échéance. Le bouton déclenche les rappels côté serveur, mais il ne confirme pas la réception dans ta boîte mail.</div>
         </div>
-      </div>
+      </div>`:''}
 
       <div style="background:var(--bg);border-radius:10px;padding:1rem">
         <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px">Code PIN</div>
@@ -1416,6 +1455,77 @@ function drawChart(){
     if(pts.length) showDetail(pts[0].index);
   };
 }
+
+// ── GRAPHIQUE CATÉGORIES ────────────────────────────────────
+let chartCatInstance = null;
+const catColors = ['#185FA5','#854F0B','#276749','#A32D2D','#7C3AED','#DC2626','#059669','#F59E0B','#6366F1','#84CC16'];
+
+function getCategoryTotals(){
+  const cats = {};
+  G.rows.forEach(r=>{
+    const cat = r.categorie || 'Sans catégorie';
+    if(!cats[cat]) cats[cat] = 0;
+    const c = calc(r);
+    cats[cat] += c.restant > 0 ? c.total : 0;
+  });
+  return Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,10);
+}
+
+function drawCategoryChart(){
+  if(typeof Chart==='undefined') return;
+  const canvas = document.getElementById('chart-cat');
+  if(!canvas) return;
+  
+  const data = getCategoryTotals();
+  if(data.length === 0){
+    document.getElementById('cat-legend').innerHTML='<div style="color:var(--text3);font-size:12px">Aucune dépense</div>';
+    return;
+  }
+  
+  if(chartCatInstance){ chartCatInstance.destroy(); chartCatInstance = null; }
+  
+  const labels = data.map(([cat])=>cat);
+  const values = data.map(([,val])=>val);
+  const colors = data.map((_,i)=>catColors[i % catColors.length]);
+  
+  chartCatInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--card'),
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){
+              return f(ctx.parsed);
+            }
+          }
+        }
+      }
+    }
+  });
+  
+  // Légende
+  const legend = document.getElementById('cat-legend');
+  legend.innerHTML = labels.map((label,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+      <div style="width:16px;height:16px;border-radius:3px;background:${colors[i]}"></div>
+      <span style="color:var(--text)">${label}</span>
+      <span style="color:var(--text3);margin-left:auto">${f(values[i])}</span>
+    </div>
+  `).join('');
+}
+
 async function removeBg(){
   await SB.from('app_config').upsert({key:'bg_photo',value:''});
   const ps=document.getElementById('pin-screen');
