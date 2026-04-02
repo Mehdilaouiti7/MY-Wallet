@@ -663,6 +663,13 @@ function alertSection(){
 
 
 function render(){
+  // Defensive cleanup: remove any stale body lock styles from old mobile fixes.
+  document.body.classList.remove('modal-open');
+  document.body.style.top='';
+  document.body.style.position='';
+  document.body.style.width='';
+  document.body.style.height='';
+  document.body.style.overflow='';
   applyDark();
   const k=kpis();
   const al=G.rows.filter(r=>{const c=calc(r);return c.st==='urgent'||c.st==='retard';}).sort((a,b)=>new Date(a.due)-new Date(b.due));
