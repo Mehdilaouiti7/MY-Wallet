@@ -127,6 +127,10 @@ tr:hover td{background:var(--bg);cursor:pointer}
 .vpt input{width:90px;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;text-align:center;font-family:inherit}
 .chart-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem}
 .chart-box h3{font-size:13px;font-weight:600;margin-bottom:.75rem;color:var(--text)}
+.cat-layout{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap}
+.cat-canvas-wrap{width:190px;height:190px;flex:0 0 190px;position:relative}
+#chart-cat{width:100%!important;height:100%!important;display:block}
+.cat-legend{flex:1;min-width:150px;display:flex;flex-direction:column;gap:8px}
 .cal-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem}
 .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
 .cal-title{font-size:14px;font-weight:600;color:var(--text)}
@@ -153,4 +157,5 @@ tr:hover td{background:var(--bg);cursor:pointer}
 @keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 @media(min-width:768px){.cards{display:none}.twrap{display:block}}
 @media(max-width:767px){.twrap{display:none}.cards{display:flex}}
-@media(max-width:480px){.fg{grid-template-columns:1fr}.fr.full{grid-column:1}.mcols{grid-template-columns:1fr}.s-actions{flex-direction:column}.s-actions .btn{width:100%}.s-photo-actions{flex-direction:column;align-items:stretch}.s-photo-actions label,.s-photo-actions button{width:100%;text-align:center}}
+@media(max-width:767px){.cat-layout{flex-direction:column;align-items:center}.cat-legend{width:100%}}
+@media(max-width:480px){.fg{grid-template-columns:1fr}.fr.full{grid-column:1}.mcols{grid-template-columns:1fr}.s-actions{flex-direction:column}.s-actions .btn{width:100%}.s-photo-actions{flex-direction:column;align-items:stretch}.s-photo-actions label,.s-photo-actions button{width:100%;text-align:center}.cat-canvas-wrap{width:170px;height:170px;flex-basis:170px}}

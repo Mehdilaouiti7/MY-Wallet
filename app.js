@@ -713,9 +713,9 @@ function render(){
 </div>
 <div class="chart-box">
   <h3 style="margin-bottom:1rem">🏷️ Dépenses par catégorie</h3>
-  <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
-    <canvas id="chart-cat" height="150" width="150" style="max-width:200px"></canvas>
-    <div id="cat-legend" style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:8px"></div>
+  <div class="cat-layout">
+    <div class="cat-canvas-wrap"><canvas id="chart-cat"></canvas></div>
+    <div id="cat-legend" class="cat-legend"></div>
   </div>
 </div>
 ${alertSection()}${salaireWidget()}${calSection()}${MB(0)}
@@ -1674,7 +1674,7 @@ function drawCategoryChart(){
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
       plugins: {
         legend: { display: false },
         tooltip: {
