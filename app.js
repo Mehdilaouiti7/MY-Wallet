@@ -88,12 +88,31 @@ async function PC(){
 // STATE
 
 let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fcat:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
-let qTimer=null;
 
-function Q(v){
-  G.fq=v;
-  if(qTimer)clearTimeout(qTimer);
-  qTimer=setTimeout(()=>{render();},180);
+function applyLiveSearch(){
+  const q=(G.fq||'').trim().toLowerCase();
+  const cards=[...document.querySelectorAll('.card[data-search]')];
+  const trs=[...document.querySelectorAll('tr[data-search]')];
+  let vc=0,vt=0;
+  cards.forEach(el=>{
+    const ok=!q||el.dataset.search.includes(q);
+    el.style.display=ok?'':'none';
+    if(ok)vc++;
+  });
+  trs.forEach(el=>{
+    const ok=!q||el.dataset.search.includes(q);
+    el.style.display=ok?'':'none';
+    if(ok)vt++;
+  });
+  const ec=document.getElementById('cards-live-empty');
+  const et=document.getElementById('table-live-empty');
+  if(ec)ec.style.display=(cards.length>0&&vc===0)?'block':'none';
+  if(et)et.style.display=(trs.length>0&&vt===0)?'block':'none';
+}
+
+function Q(el){
+  G.fq=el.value;
+  applyLiveSearch();
 }
 
 function RF(){
@@ -316,7 +335,6 @@ function filtered(){
     if(G.fcat==='__none__'&&r.categorie)return false;
     if(G.fcat!=='tous'&&G.fcat!=='__none__'&&r.categorie!==G.fcat)return false;
     if(G.fs!=='tous'&&r.source!==G.fs)return false;
-    if(G.fq&&!r.marchand.toLowerCase().includes(G.fq.toLowerCase())&&!(r.notes||'').toLowerCase().includes(G.fq.toLowerCase()))return false;
     return true;
   }).sort((a,b)=>{
     const ca=calc(a),cb=calc(b);
@@ -751,7 +769,7 @@ ${previsionAnnuelle()}<div class="sg">
   <button class="tab ${G.tab==='archive'?'on':''}" onclick="G.tab='archive';render()" style="color:#718096">🗃️ Archives (${G.archive_rows.length})</button>
 </div>
 <div class="filters">
-  <input placeholder="Rechercher..." value="${G.fq}" oninput="Q(this.value)" style="min-width:120px;flex:1;max-width:180px">
+  <input id="search-input" placeholder="Rechercher..." value="${G.fq}" oninput="Q(this)" style="min-width:120px;flex:1;max-width:180px">
   <select onchange="G.fa=this.value;render()">
     <option value="tous" ${G.fa==='tous'?'selected':''}>Tous</option>
     <option value="moi_all" ${G.fa==='moi_all'?'selected':''}>Moi (partagés inclus)</option>
@@ -784,7 +802,7 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
   const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);
   const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';
   const catIcon = r.categorie ? G.cats.find(c=>c.nom===r.categorie)?.icon || '' : '';
-  return`<div class="card" onclick="OE('${r.id}')">
+  return`<div class="card" data-search="${(r.marchand+' '+(r.notes||'')).toLowerCase()}" onclick="OE('${r.id}')">
     <div class="ch"><div><div class="ctitle">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
       <div style="text-align:right"><div style="font-size:15px;font-weight:700" class="c-blue">${f(c.cv)}</div><div style="font-size:10px;color:#a0aec0">/versement</div></div>
     </div>
@@ -808,9 +826,10 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
   </div>`;
 }).join('')}
 </div>
+<div id="cards-live-empty" class="empty" style="display:none">Aucun résultat</div>
 <div class="twrap">
 ${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Payé</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
-${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';const catIcon = r.categorie ? G.cats.find(cat=>cat.nom===r.categorie)?.icon || '' : '';return`<tr onclick="OE('${r.id}')">
+${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';const catIcon = r.categorie ? G.cats.find(cat=>cat.nom===r.categorie)?.icon || '' : '';return`<tr data-search="${(r.marchand+' '+(r.notes||'')).toLowerCase()}" onclick="OE('${r.id}')">
   <td><div style="font-weight:500">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
   <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
   <td style="font-weight:600;white-space:nowrap">${f(c.cv)}</td><td style="font-weight:600;color:#276749;white-space:nowrap">${f(c.deja)}</td><td style="white-space:nowrap">${f(c.total)}</td>
@@ -821,9 +840,11 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
   <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px"><button class="btn-pay" ${c.pd?'disabled':''} onclick="OP('${r.id}')">${c.pd&&c.st!=='soldé'?'✓':'💳'}</button><button class="btn btn-sm btn-d" onclick="DR('${r.id}')">✕</button></div></td>
 </tr>`;}).join('')}
 </tbody></table>`}
+<div id="table-live-empty" class="empty" style="display:none;padding:1rem">Aucun résultat</div>
 </div>
 ${G.tab==='archive'?renderArchives():''}
 ${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}${G.lm?LM():''}`;
+  applyLiveSearch();
   setTimeout(drawChart, 50);
   setTimeout(drawCategoryChart, 50);
 }
