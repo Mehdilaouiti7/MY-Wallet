@@ -431,7 +431,7 @@ function aboSection(){
   const totalMoi = actifs.filter(a=>!a.partage&&a.acheteur==='Moi').reduce((s,a)=>s+parseFloat(a.montant),0);
   const totalCop = actifs.filter(a=>!a.partage&&a.acheteur==='Copine').reduce((s,a)=>s+parseFloat(a.montant),0);
   const totalPar = actifs.filter(a=>a.partage).reduce((s,a)=>s+parseFloat(a.montant),0);
-  const maPart   = actifs.filter(a=>a.partage).reduce((s,a)=>s+(a.partage_type==='perso'?parseFloat(a.montant_copine||0):(parseFloat(a.montant)/2)),0);
+  const maPart   = actifs.filter(a=>a.partage).reduce((s,a)=>{const amt=parseFloat(a.montant)||0;const mc=a.partage_type==='perso'?parseFloat(a.montant_copine||0):amt/2;return s+(amt-mc);},0);
 
   return `<div class="mbox" style="margin-bottom:1rem">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px">
