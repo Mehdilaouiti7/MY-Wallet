@@ -752,7 +752,7 @@ function renderStats(){
   <h3 style="margin-bottom:1rem">🏷️ Dépenses par catégorie</h3>
   <div class="cat-layout"><div class="cat-canvas-wrap"><canvas id="chart-cat"></canvas></div><div id="cat-legend" class="cat-legend"></div></div>
 </div>
-${previsionAnnuelle()}<div class="sg">
+${yearGrid()}${previsionAnnuelle()}<div class="sg">
   <div class="sc"><h3 class="c-blue">👤 Moi (solo)</h3><div class="sr"><span>Total</span><span>${f(sm.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sm.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sm.r)}</span></div></div>
   <div class="sc"><h3 class="c-amber">💑 Copine (solo)</h3><div class="sr"><span>Total</span><span>${f(sc.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sc.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sc.r)}</span></div></div>
   <div class="sc"><h3 style="color:#27500A">🤝 Partagés</h3><div class="sr"><span>Total</span><span>${f(sp.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sp.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sp.r)}</span></div><div class="sr" style="border-top:1px solid #f0f4f8;margin-top:4px;padding-top:4px"><span>À récupérer</span><span class="c-purple">${f(sp.a)}</span></div></div>
@@ -1833,6 +1833,46 @@ async function restoreArchive(id){
 // G.sf=false → prochains mois  G.sf=true → historique  G.sf2=true → comparaison N-1
 
 // ── PRÉVISION ANNUELLE ───────────────────────────────────────────
+function yearGrid(){
+  if(G.salaire===0) return '';
+  const now=new Date();
+  const curY=now.getFullYear(), curM=now.getMonth();
+  const fixedAbos=Math.round(((G.abos||[]).filter(a=>a.actif&&a.acheteur==='Moi'&&!a.partage).reduce((s,a)=>s+parseFloat(a.montant),0)
+    +(G.abos||[]).filter(a=>a.actif&&a.partage).reduce((s,a)=>s+(parseFloat(a.montant)-(a.partage_type==='perso'?parseFloat(a.montant_copine||0):parseFloat(a.montant)/2)),0))*100)/100;
+  const mn=['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
+  const cells=mn.map((name,m)=>{
+    const ech=Math.round(GMD(curY,m).mi.reduce((s,i)=>s+i.m,0)*100)/100;
+    const charges=Math.round((ech+fixedAbos)*100)/100;
+    const epargne=Math.round((G.salaire-charges)*100)/100;
+    const isCur=m===curM, isPast=m<curM;
+    let bg,col,bord;
+    if(isPast){bg='var(--bg)';col='var(--text3)';bord='var(--border)';}
+    else if(epargne<0){bg='#FCEBEB';col='#A32D2D';bord='#F09595';}
+    else if(epargne<G.salaire*0.1){bg='#FAEEDA';col='#854F0B';bord='#F0C87A';}
+    else if(epargne<G.salaire*0.2){bg='#FFFBEA';col='#92620C';bord='#F0D985';}
+    else{bg='#EAF3DE';col='#276749';bord='#97C459';}
+    return `<div style="background:${bg};border:1.5px solid ${bord};border-radius:12px;padding:.65rem .75rem;position:relative${isCur?';box-shadow:0 0 0 2.5px #185FA5':''}">
+      ${isCur?`<div style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#185FA5"></div>`:''}
+      <div style="font-size:11px;font-weight:700;color:${isPast?'var(--text3)':'var(--text)'};margin-bottom:5px">${name}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Charges</div>
+      <div style="font-size:12px;font-weight:600;color:${isPast?'var(--text3)':'var(--text2)'};margin-bottom:5px">${isPast?'—':f(charges)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Épargne est.</div>
+      <div style="font-size:14px;font-weight:700;color:${col}">${isPast?'—':f(epargne)}</div>
+    </div>`;
+  });
+  return `<div class="chart-box">
+    <h3 style="margin-bottom:.75rem">🗓️ Prévision épargne ${curY}</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.75rem">${cells.join('')}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--text3)">
+      <span>🟢 &gt;20% du salaire</span>
+      <span>🟡 10–20%</span>
+      <span>🟠 &lt;10%</span>
+      <span>🔴 Déficit</span>
+      <span style="opacity:.5">⬜ Mois passé</span>
+    </div>
+  </div>`;
+}
+
 function previsionAnnuelle(){
   const now = new Date();
   const curY = now.getFullYear();
