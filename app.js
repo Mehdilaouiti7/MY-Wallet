@@ -308,11 +308,14 @@ function GMD(y,m){
         }
       }
     } else {
-      // Pour le mois courant : juste la date due actuelle
-      const due=new Date(r.due+'T12:00:00');
-      if(due>=s&&due<=e){
-        if(r.acheteur==='Moi'||r.partage)mi.push({n:r.marchand,m:r.partage?c.cv-c.cc:c.cv,p:r.partage});
-        if(r.acheteur==='Copine'||r.partage)co.push({n:r.marchand,m:r.partage?c.cc:c.cv,p:r.partage});
+      // Pour le mois courant/passé : calculer l'index théorique de l'échéance du mois cible
+      const dueDate=new Date(r.due+'T12:00:00');
+      const monthsFromDue=(y-dueDate.getFullYear())*12+(m-dueDate.getMonth());
+      const instIdx=r.pays+monthsFromDue;
+      if(instIdx>=0&&instIdx<r.total_inst){
+        const mv=gv(r,instIdx);const mc=gc(r,instIdx);
+        if(r.acheteur==='Moi'||r.partage)mi.push({n:r.marchand,m:r.partage?mv-mc:mv,p:r.partage});
+        if(r.acheteur==='Copine'||r.partage)co.push({n:r.marchand,m:r.partage?mc:mv,p:r.partage});
       }
     }
   });
@@ -1027,28 +1030,8 @@ function salaireWidget(){
   // Calculer les charges fixes du mois courant
   const now = new Date();
   const curY = now.getFullYear(), curM = now.getMonth();
-  const ms = new Date(curY, curM, 1, 0, 0, 0);
-  const me = new Date(curY, curM + 1, 0, 23, 59, 59);
-  let totalEch = 0;
-  G.rows.forEach(r => {
-    if (r.acheteur !== 'Moi' && !r.partage) return;
-    const c = calc(r);
-    const due = new Date(r.due + 'T12:00:00');
-    // Échéance pas encore payée, prévue ce mois
-    if (c.st !== 'soldé' && due >= ms && due <= me) {
-      totalEch += r.partage ? c.cv - c.cc : c.cv;
-      return;
-    }
-    // Échéance déjà payée ce mois : récupérer le montant du versement payé
-    if (r.last_paid_date && r.pays > 0) {
-      const lp = new Date(r.last_paid_date + 'T12:00:00');
-      if (lp >= ms && lp <= me) {
-        const paidIdx = r.pays - 1;
-        totalEch += r.partage ? gv(r, paidIdx) - gc(r, paidIdx) : gv(r, paidIdx);
-      }
-    }
-  });
-  totalEch = Math.round(totalEch * 100) / 100;
+  const d = GMD(curY, curM);
+  const totalEch = Math.round(d.mi.reduce((s,i)=>s+i.m,0)*100)/100;
   const totalAbos = (G.abos||[]).filter(a=>a.actif&&a.acheteur==='Moi'&&!a.partage).reduce((s,a)=>s+parseFloat(a.montant),0);
   const totalAbosPartage = (G.abos||[]).filter(a=>a.actif&&a.partage).reduce((s,a)=>s+(parseFloat(a.montant)-(a.partage_type==='perso'?parseFloat(a.montant_copine||0):parseFloat(a.montant)/2)),0);
   const charges = Math.round((totalEch + totalAbos + totalAbosPartage)*100)/100;
