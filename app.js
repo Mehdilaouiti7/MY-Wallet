@@ -87,7 +87,7 @@ async function PC(){
 
 // STATE
 
-let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fcat:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null}};
+let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fcat:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null},page:'home'};
 
 function applyLiveSearch(){
   const q=(G.fq||'').trim().toLowerCase();
@@ -703,26 +703,26 @@ function alertSection(){
 
 
 
-function render(){
-  // Defensive cleanup: remove any stale body lock styles from old mobile fixes.
-  document.body.classList.remove('modal-open');
-  document.body.style.top='';
-  document.body.style.position='';
-  document.body.style.width='';
-  document.body.style.height='';
-  document.body.style.overflow='';
-  applyDark();
+function bottomNav(){
+  const p=G.page||'home';
+  return `<nav class="bottom-nav">
+    <button class="bn-item${p==='home'?' active':''}" onclick="G.page='home';render()"><span class="bn-icon">🏠</span><span>Accueil</span></button>
+    <button class="bn-item${p==='stats'?' active':''}" onclick="G.page='stats';render()"><span class="bn-icon">📊</span><span>Stats</span></button>
+    <div class="bn-fab-wrap"><button class="bn-fab" onclick="OE('new')">+</button></div>
+    <button class="bn-item${p==='achats'?' active':''}" onclick="G.page='achats';render()"><span class="bn-icon">💳</span><span>Achats</span></button>
+    <button class="bn-item${p==='abos'?' active':''}" onclick="G.page='abos';render()"><span class="bn-icon">🔄</span><span>Abos</span></button>
+  </nav>`;
+}
+
+function renderHome(){
+  return `${alertSection()}${salaireWidget()}${calSection()}${MB(0)}${MB(1)}`;
+}
+
+function renderStats(){
   const k=kpis();
-  const al=G.rows.filter(r=>{const c=calc(r);return c.st==='urgent'||c.st==='retard';}).sort((a,b)=>new Date(a.due)-new Date(b.due));
-  const rows=filtered();
   let sm={e:0,d:0,r:0},sc={e:0,d:0,r:0},sp={e:0,d:0,r:0,a:0};
   G.rows.forEach(r=>{const c=calc(r);if(r.partage){sp.e+=c.total;sp.d+=c.deja;sp.r+=c.restant;sp.a+=c.pc;}else if(r.acheteur==='Moi'){sm.e+=c.total;sm.d+=c.deja;sm.r+=c.restant;}else{sc.e+=c.total;sc.d+=c.deja;sc.r+=c.restant;}});
-  const nEn=G.rows.filter(r=>calc(r).st!=='soldé').length;
-  const nSo=G.rows.filter(r=>calc(r).st==='soldé').length;
-
-  document.getElementById('app').innerHTML=`
-<div class="topbar"><h1>MY <span>Wallet</span> 💛 <span style="font-size:11px;color:var(--text3)">(${G.user_role||'Moi'})</span></h1><div class="topbar-r">${G.user_role==='Moi'?'<button class="btn" onclick="openLogs()" title="Historique paiements" style="padding:6px 10px">📜</button>':''}<button class="btn" onclick="exportPDF()" title="Export PDF" style="padding:6px 10px">📄</button><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button><button class="btn btn-p" onclick="OE(null)">+ Ajouter</button></div></div>
-<div class="kpi-grid">
+  return `<div class="kpi-grid">
   <div class="kpi"><div class="kpi-l">Total engagé</div><div class="kpi-v c-blue">${f(k.te)}</div></div>
   <div class="kpi"><div class="kpi-l">Reste à payer</div><div class="kpi-v c-red">${f(k.tr)}</div></div>
   <div class="kpi"><div class="kpi-l">Ma part</div><div class="kpi-v c-blue">${f(k.mr)}</div></div>
@@ -733,41 +733,37 @@ function render(){
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px">
     <h3 style="margin:0">📊 ${G.comp?'Comparaison N-1':G.sf?'6 derniers mois':'6 prochains mois'}</h3>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button onclick="G.sf=!G.sf;G.comp=false;render()" style="padding:4px 10px;border-radius:20px;border:1px solid ${!G.comp&&G.sf?'#185FA5':'var(--border)'};background:${!G.comp&&G.sf?'#185FA5':'var(--card)'};color:${!G.comp&&G.sf?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
-        ${G.sf?'📅 Prochains':'🕐 Historique'}
-      </button>
-      <button onclick="G.comp=!G.comp;render()" style="padding:4px 10px;border-radius:20px;border:1px solid ${G.comp?'#854F0B':'var(--border)'};background:${G.comp?'#854F0B':'var(--card)'};color:${G.comp?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">
-        📊 vs N-1
-      </button>
+      <button onclick="G.sf=!G.sf;G.comp=false;render()" style="padding:4px 10px;border-radius:20px;border:1px solid ${!G.comp&&G.sf?'#185FA5':'var(--border)'};background:${!G.comp&&G.sf?'#185FA5':'var(--card)'};color:${!G.comp&&G.sf?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">${G.sf?'📅 Prochains':'🕐 Historique'}</button>
+      <button onclick="G.comp=!G.comp;render()" style="padding:4px 10px;border-radius:20px;border:1px solid ${G.comp?'#854F0B':'var(--border)'};background:${G.comp?'#854F0B':'var(--card)'};color:${G.comp?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">📊 vs N-1</button>
     </div>
   </div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-    <button onclick="G.cfa='tous';render()"   style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='tous'?'#185FA5':'var(--card)'};color:${G.cfa==='tous'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">Tous</button>
-    <button onclick="G.cfa='moi_p';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='moi_p'?'#185FA5':'var(--card)'};color:${G.cfa==='moi_p'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">👤 Moi + partagés</button>
-    <button onclick="G.cfa='moi_s';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='moi_s'?'#185FA5':'var(--card)'};color:${G.cfa==='moi_s'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">👤 Moi seul</button>
-    <button onclick="G.cfa='cop_p';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='cop_p'?'#185FA5':'var(--card)'};color:${G.cfa==='cop_p'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">💑 Copine + partagés</button>
-    <button onclick="G.cfa='cop_s';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='cop_s'?'#185FA5':'var(--card)'};color:${G.cfa==='cop_s'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">💑 Copine seule</button>
-    <button onclick="G.cfa='par';render()"    style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='par'?'#185FA5':'var(--card)'};color:${G.cfa==='par'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">🤝 Partagés</button>
+    <button onclick="G.cfa='tous';render()"  style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='tous'?'#185FA5':'var(--card)'};color:${G.cfa==='tous'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">Tous</button>
+    <button onclick="G.cfa='moi_p';render()" style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='moi_p'?'#185FA5':'var(--card)'};color:${G.cfa==='moi_p'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">👤 Moi + partagés</button>
+    <button onclick="G.cfa='moi_s';render()" style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='moi_s'?'#185FA5':'var(--card)'};color:${G.cfa==='moi_s'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">👤 Moi seul</button>
+    <button onclick="G.cfa='cop_p';render()" style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='cop_p'?'#185FA5':'var(--card)'};color:${G.cfa==='cop_p'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">💑 Copine + partagés</button>
+    <button onclick="G.cfa='cop_s';render()" style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='cop_s'?'#185FA5':'var(--card)'};color:${G.cfa==='cop_s'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">💑 Copine seule</button>
+    <button onclick="G.cfa='par';render()"   style="padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:${G.cfa==='par'?'#185FA5':'var(--card)'};color:${G.cfa==='par'?'#fff':'var(--text3)'};font-size:11px;cursor:pointer;font-family:inherit;touch-action:manipulation">🤝 Partagés</button>
   </div>
   <canvas id="chart-mois" height="200"></canvas>
   <div id="chart-detail" style="display:none;margin-top:10px;background:var(--bg);border-radius:8px;padding:10px;font-size:12px"></div>
 </div>
 <div class="chart-box">
   <h3 style="margin-bottom:1rem">🏷️ Dépenses par catégorie</h3>
-  <div class="cat-layout">
-    <div class="cat-canvas-wrap"><canvas id="chart-cat"></canvas></div>
-    <div id="cat-legend" class="cat-legend"></div>
-  </div>
+  <div class="cat-layout"><div class="cat-canvas-wrap"><canvas id="chart-cat"></canvas></div><div id="cat-legend" class="cat-legend"></div></div>
 </div>
-${alertSection()}${salaireWidget()}${calSection()}${MB(0)}
-${MB(1)}
-
 ${previsionAnnuelle()}<div class="sg">
   <div class="sc"><h3 class="c-blue">👤 Moi (solo)</h3><div class="sr"><span>Total</span><span>${f(sm.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sm.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sm.r)}</span></div></div>
   <div class="sc"><h3 class="c-amber">💑 Copine (solo)</h3><div class="sr"><span>Total</span><span>${f(sc.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sc.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sc.r)}</span></div></div>
   <div class="sc"><h3 style="color:#27500A">🤝 Partagés</h3><div class="sr"><span>Total</span><span>${f(sp.e)}</span></div><div class="sr"><span>Payé</span><span class="c-green">${f(sp.d)}</span></div><div class="sr"><span>Reste</span><span class="c-red">${f(sp.r)}</span></div><div class="sr" style="border-top:1px solid #f0f4f8;margin-top:4px;padding-top:4px"><span>À récupérer</span><span class="c-purple">${f(sp.a)}</span></div></div>
-</div><br>${aboSection()}
-<div class="tabs">
+</div>`;
+}
+
+function renderAchats(){
+  const rows=filtered();
+  const nEn=G.rows.filter(r=>calc(r).st!=='soldé').length;
+  const nSo=G.rows.filter(r=>calc(r).st==='soldé').length;
+  return `<div class="tabs">
   <button class="tab ${G.tab==='all'?'on':''}" onclick="G.tab='all';render()">En cours (${nEn})</button>
   <button class="tab ${G.tab==='upcoming'?'on':''}" onclick="G.tab='upcoming';render()">À venir</button>
   <button class="tab ${G.tab==='past'?'on':''}" onclick="G.tab='past';render()">Soldés (${nSo})</button>
@@ -793,12 +789,12 @@ ${previsionAnnuelle()}<div class="sg">
     ${SRC.map(s=>`<option value="${s}" ${G.fs===s?'selected':''}>${s}</option>`).join('')}
   </select>
   <select onchange="G.tri=this.value;render()" style="min-width:170px">
-    <option value="date"    ${G.tri==='date'   ?'selected':''}>📅 Échéance (+ proche)</option>
-    <option value="montant" ${G.tri==='montant'?'selected':''}>💰 Montant restant (+ grand)</option>
-    <option value="statut"  ${G.tri==='statut' ?'selected':''}>⚠️ Statut (retard → ok)</option>
-    <option value="alpha"   ${G.tri==='alpha'  ?'selected':''}>🔤 Marchand (A → Z)</option>
-    <option value="acheteur"${G.tri==='acheteur'?'selected':''}>👤 Acheteur (Moi → Copine)</option>
-    <option value="recent"  ${G.tri==='recent' ?'selected':''}>🕐 Ajout récent</option>
+    <option value="date"     ${G.tri==='date'    ?'selected':''}>📅 Échéance (+ proche)</option>
+    <option value="montant"  ${G.tri==='montant' ?'selected':''}>💰 Montant restant (+ grand)</option>
+    <option value="statut"   ${G.tri==='statut'  ?'selected':''}>⚠️ Statut (retard → ok)</option>
+    <option value="alpha"    ${G.tri==='alpha'   ?'selected':''}>🔤 Marchand (A → Z)</option>
+    <option value="acheteur" ${G.tri==='acheteur'?'selected':''}>👤 Acheteur (Moi → Copine)</option>
+    <option value="recent"   ${G.tri==='recent'  ?'selected':''}>🕐 Ajout récent</option>
   </select>
   <button class="btn" onclick="RF()" title="Réinitialiser les filtres">♻️ Reset</button>
 </div>
@@ -806,9 +802,9 @@ ${previsionAnnuelle()}<div class="sg">
 ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
   const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);
   const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';
-  const catIcon = r.categorie ? G.cats.find(c=>c.nom===r.categorie)?.icon || '' : '';
+  const catIcon=r.categorie?G.cats.find(c=>c.nom===r.categorie)?.icon||'':'';
   return`<div class="card" data-search="${(r.marchand+' '+(r.notes||'')).toLowerCase()}" onclick="OE('${r.id}')">
-    <div class="ch"><div><div class="ctitle">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
+    <div class="ch"><div><div class="ctitle">${catIcon?catIcon+' ':''}${r.marchand}</div>${r.notes?`<div class="cnote">${r.notes}</div>`:''}</div>
       <div style="text-align:right"><div style="font-size:15px;font-weight:700" class="c-blue">${f(c.cv)}</div><div style="font-size:10px;color:#a0aec0">/versement</div></div>
     </div>
     <div class="cbadges">${AB(r)}${SB2(c.st)}<span class="badge b-src">${r.source||'—'}</span></div>
@@ -834,8 +830,8 @@ ${rows.length===0?'<div class="empty">Aucun résultat</div>':rows.map(r=>{
 <div id="cards-live-empty" class="empty" style="display:none">Aucun résultat</div>
 <div class="twrap">
 ${rows.length===0?'<div class="empty">Aucun résultat</div>':`<table><thead><tr><th>Marchand</th><th>Source</th><th>Acheteur</th><th>Versement</th><th>Payé</th><th>Total</th><th>Progrès</th><th>Restant</th><th>Prochaine éch.</th><th>Jours</th><th>Statut</th><th>Copine</th><th>Actions</th></tr></thead><tbody>
-${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';const catIcon = r.categorie ? G.cats.find(cat=>cat.nom===r.categorie)?.icon || '' : '';return`<tr data-search="${(r.marchand+' '+(r.notes||'')).toLowerCase()}" onclick="OE('${r.id}')">
-  <td><div style="font-weight:500">${catIcon ? catIcon + ' ' : ''}${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
+${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);const bc=c.st==='soldé'?'#276749':c.st==='retard'?'#A32D2D':'#185FA5';const catIcon=r.categorie?G.cats.find(cat=>cat.nom===r.categorie)?.icon||'':'';return`<tr data-search="${(r.marchand+' '+(r.notes||'')).toLowerCase()}" onclick="OE('${r.id}')">
+  <td><div style="font-weight:500">${catIcon?catIcon+' ':''}${r.marchand}</div>${r.notes?`<div style="font-size:10px;color:#a0aec0">${r.notes}</div>`:''}</td>
   <td><span class="badge b-src">${r.source||'—'}</span></td><td>${AB(r)}</td>
   <td style="font-weight:600;white-space:nowrap">${f(c.cv)}</td><td style="font-weight:600;color:#276749;white-space:nowrap">${f(c.deja)}</td><td style="white-space:nowrap">${f(c.total)}</td>
   <td><div style="font-size:10px;color:#a0aec0">${r.pays}/${r.total_inst}</div><div class="pbar" style="width:72px"><div class="pfill" style="width:${pct}%;background:${bc}"></div></div></td>
@@ -847,11 +843,34 @@ ${rows.map(r=>{const c=calc(r);const pct=Math.round((r.pays/r.total_inst)*100);c
 </tbody></table>`}
 <div id="table-live-empty" class="empty" style="display:none;padding:1rem">Aucun résultat</div>
 </div>
-${G.tab==='archive'?renderArchives():''}
+${G.tab==='archive'?renderArchives():''}`;
+}
+
+function render(){
+  document.body.classList.remove('modal-open');
+  document.body.style.top='';
+  document.body.style.position='';
+  document.body.style.width='';
+  document.body.style.height='';
+  document.body.style.overflow='';
+  applyDark();
+
+  let pageHTML;
+  switch(G.page){
+    case 'stats':  pageHTML=renderStats();  break;
+    case 'achats': pageHTML=renderAchats(); break;
+    case 'abos':   pageHTML=aboSection();   break;
+    default:       pageHTML=renderHome();   break;
+  }
+
+  document.getElementById('app').innerHTML=`
+<div class="topbar"><h1>MY <span>Wallet</span> 💛 <span style="font-size:11px;color:var(--text3)">(${G.user_role||'Moi'})</span></h1><div class="topbar-r">${G.user_role==='Moi'?'<button class="btn" onclick="openLogs()" title="Historique paiements" style="padding:6px 10px">📜</button>':''}<button class="btn" onclick="exportPDF()" title="Export PDF" style="padding:6px 10px">📄</button><button class="btn" onclick="G.sm=true;render()" style="font-size:16px;padding:6px 10px">⚙️</button></div></div>
+${pageHTML}
+${bottomNav()}
 ${G.eid!==null?EM():''}${G.pid?PM():''}${G.sm?SM():''}${G.lm?LM():''}`;
   applyLiveSearch();
-  setTimeout(drawChart, 50);
-  setTimeout(drawCategoryChart, 50);
+  setTimeout(drawChart,50);
+  setTimeout(drawCategoryChart,50);
 }
 
 function EM(){
@@ -1092,7 +1111,6 @@ function SM(){
           <input id="sal-input" type="number" step="100" value="${G.salaire||''}" placeholder="Ex: 2500" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
           <button onclick="saveSalaire()" class="btn btn-p">Enregistrer</button>
         </div>
-        ${G.salaire>0?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Net estimé (~77%) : <strong style="color:#276749">${f(Math.round(G.salaire*0.77*100)/100)}</strong></div>`:''}
       </div>
 
       <div class="s-card">
