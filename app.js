@@ -87,7 +87,7 @@ async function PC(){
 
 // STATE
 
-let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fcat:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null},page:'home'};
+let G={rows:[],archive_rows:[],tab:'all',comp:false,email:'',fa:'tous',fcat:'tous',fs:'tous',fq:'',tri:'date',eid:null,pid:null,pm:false,sm:false,sf:false,lm:false,user_role:'',logs:[],cfa:'tous',abos:[],eabo:null,cats:[],salaire:0,budget_vie:0,cop_credit:{},cal:{y:new Date().getFullYear(),m:new Date().getMonth(),sel:null},page:'home'};
 
 function applyLiveSearch(){
   const q=(G.fq||'').trim().toLowerCase();
@@ -155,14 +155,15 @@ async function saveCopCredit(){
 
 
 async function LD(){
-  const [{data:d1,error:e1},{data:d2},{data:d3},{data:d4},{data:d5},{data:d6},{data:d7}]=await Promise.all([
+  const [{data:d1,error:e1},{data:d2},{data:d3},{data:d4},{data:d5},{data:d6},{data:d7},{data:d8}]=await Promise.all([
     SB.from('echeances').select('*').eq('archive',false).order('due'),
     SB.from('abonnements').select('*').order('nom'),
     SB.from('categories').select('*').order('nom'),
     SB.from('app_config').select('key,value').eq('key','salaire_brut').single(),
     SB.from('echeances').select('*').eq('archive',true).order('created_at',{ascending:false}),
     SB.from('app_config').select('key,value').eq('key','email_rappel').single(),
-    SB.from('app_config').select('key,value').eq('key','cop_credit_map').single()
+    SB.from('app_config').select('key,value').eq('key','cop_credit_map').single(),
+    SB.from('app_config').select('key,value').eq('key','budget_vie').single()
   ]);
   if(e1){T('Erreur: '+e1.message);return;}
   G.rows=d1||[];
@@ -172,6 +173,7 @@ async function LD(){
   G.archive_rows=d5||[];
   G.email=d6?.value||'';
   try{G.cop_credit=d7?.value?JSON.parse(d7.value):{};}catch(e){G.cop_credit={};}
+  G.budget_vie=parseFloat(d8?.value||0);
 }
 
 async function AI(){
@@ -1056,25 +1058,33 @@ function salaireWidget(){
   const totalAbos = (G.abos||[]).filter(a=>a.actif&&a.acheteur==='Moi'&&!a.partage).reduce((s,a)=>s+parseFloat(a.montant),0);
   const totalAbosPartage = (G.abos||[]).filter(a=>a.actif&&a.partage).reduce((s,a)=>s+(parseFloat(a.montant)-(a.partage_type==='perso'?parseFloat(a.montant_copine||0):parseFloat(a.montant)/2)),0);
   const charges = Math.round((totalEch + totalAbos + totalAbosPartage)*100)/100;
-  
+
   if(G.salaire===0) return '';
 
   const reste = Math.round((G.salaire - charges)*100)/100;
-  const color = reste > 0 ? '#276749' : '#A32D2D';
-  const pct = Math.min(100, Math.max(0, Math.round((charges/G.salaire)*100)));
-  
+  const epargne = Math.round((reste - G.budget_vie)*100)/100;
+  const colorReste = reste > 0 ? '#276749' : '#A32D2D';
+  const colorEpargne = epargne > 0 ? '#185FA5' : '#A32D2D';
+  const pct = Math.min(100, Math.max(0, Math.round(((charges + G.budget_vie)/G.salaire)*100)));
+
   return `<div class="mbox" style="margin-bottom:1rem">
     <div class="mbox-t">💶 Salaire & Reste à vivre</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div class="kpi"><div class="kpi-l">Salaire</div><div class="kpi-v" style="color:var(--text)">${f(G.salaire)}</div></div>
-      <div class="kpi"><div class="kpi-l">Charges mois</div><div class="kpi-v c-red">${f(charges)}</div></div>
-      <div class="kpi"><div class="kpi-l">Reste à vivre</div><div class="kpi-v" style="color:${color}">${f(reste)}</div></div>
+      <div class="kpi"><div class="kpi-l">Charges fixes</div><div class="kpi-v c-red">${f(charges)}</div></div>
     </div>
+    ${G.budget_vie>0?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="kpi"><div class="kpi-l">Budget vie courante</div><div class="kpi-v c-amber">− ${f(G.budget_vie)}</div></div>
+      <div class="kpi"><div class="kpi-l">Épargne estimée</div><div class="kpi-v" style="color:${colorEpargne}">${f(epargne)}</div></div>
+    </div>`:`<div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px">
+      <div class="kpi"><div class="kpi-l">Reste à vivre</div><div class="kpi-v" style="color:${colorReste}">${f(reste)}</div></div>
+    </div>
+    <div style="font-size:11px;color:#854F0B;background:#FAEEDA;border-radius:8px;padding:6px 10px;margin-bottom:8px">⚠️ Définis un budget vie courante dans ⚙️ pour estimer ton épargne réelle</div>`}
     <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden">
-      <div style="width:${pct}%;height:100%;background:${pct>80?'#A32D2D':pct>60?'#BA7517':'#276749'};border-radius:4px;transition:width .3s"></div>
+      <div style="width:${pct}%;height:100%;background:${pct>90?'#A32D2D':pct>75?'#BA7517':'#276749'};border-radius:4px;transition:width .3s"></div>
     </div>
     <div style="font-size:10px;color:var(--text3);margin-top:3px;text-align:right">
-      <span>Charges : ${pct}% du salaire</span>
+      <span>Charges${G.budget_vie>0?' + vie courante':''} : ${pct}% du salaire</span>
     </div>
   </div>`;
 }
@@ -1106,10 +1116,19 @@ function SM(){
       </div>
 
       <div class="s-card">
-        <div class="s-head">💶 Salaire brut mensuel</div>
+        <div class="s-head">💶 Salaire mensuel net</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input id="sal-input" type="number" step="100" value="${G.salaire||''}" placeholder="Ex: 2500" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
           <button onclick="saveSalaire()" class="btn btn-p">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="s-card">
+        <div class="s-head">🛒 Budget vie courante / mois</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Courses, essence, restos, loisirs... (déduit pour calculer l'épargne réelle)</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="budget-vie-input" type="number" step="50" value="${G.budget_vie||''}" placeholder="Ex: 600" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-family:inherit">
+          <button onclick="saveBudgetVie()" class="btn btn-p">Enregistrer</button>
         </div>
       </div>
 
@@ -1782,6 +1801,13 @@ async function saveSalaire(){
   render();
   T('Salaire enregistré ✓');
 }
+async function saveBudgetVie(){
+  const val = parseFloat(document.getElementById('budget-vie-input')?.value)||0;
+  await SB.from('app_config').upsert({key:'budget_vie',value:String(val)});
+  G.budget_vie = val;
+  render();
+  T('Budget vie courante enregistré ✓');
+}
 
 async function addCat(){
   const icon = document.getElementById('cat-icon')?.value.trim()||'🏷️';
@@ -1843,21 +1869,23 @@ function yearGrid(){
   const cells=mn.map((name,m)=>{
     const ech=Math.round(GMD(curY,m).mi.reduce((s,i)=>s+i.m,0)*100)/100;
     const charges=Math.round((ech+fixedAbos)*100)/100;
-    const epargne=Math.round((G.salaire-charges)*100)/100;
+    const reste=Math.round((G.salaire-charges)*100)/100;
+    const epargne=Math.round((reste-G.budget_vie)*100)/100;
     const isCur=m===curM, isPast=m<curM;
+    const val=G.budget_vie>0?epargne:reste;
     let bg,col,bord;
     if(isPast){bg='var(--bg)';col='var(--text3)';bord='var(--border)';}
-    else if(epargne<0){bg='#FCEBEB';col='#A32D2D';bord='#F09595';}
-    else if(epargne<G.salaire*0.1){bg='#FAEEDA';col='#854F0B';bord='#F0C87A';}
-    else if(epargne<G.salaire*0.2){bg='#FFFBEA';col='#92620C';bord='#F0D985';}
+    else if(val<0){bg='#FCEBEB';col='#A32D2D';bord='#F09595';}
+    else if(val<G.salaire*0.1){bg='#FAEEDA';col='#854F0B';bord='#F0C87A';}
+    else if(val<G.salaire*0.2){bg='#FFFBEA';col='#92620C';bord='#F0D985';}
     else{bg='#EAF3DE';col='#276749';bord='#97C459';}
     return `<div style="background:${bg};border:1.5px solid ${bord};border-radius:12px;padding:.65rem .75rem;position:relative${isCur?';box-shadow:0 0 0 2.5px #185FA5':''}">
       ${isCur?`<div style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:#185FA5"></div>`:''}
       <div style="font-size:11px;font-weight:700;color:${isPast?'var(--text3)':'var(--text)'};margin-bottom:5px">${name}</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Charges</div>
-      <div style="font-size:12px;font-weight:600;color:${isPast?'var(--text3)':'var(--text2)'};margin-bottom:5px">${isPast?'—':f(charges)}</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Épargne est.</div>
-      <div style="font-size:14px;font-weight:700;color:${col}">${isPast?'—':f(epargne)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:1px">Charges</div>
+      <div style="font-size:11px;font-weight:600;color:${isPast?'var(--text3)':'var(--text2)'};margin-bottom:4px">${isPast?'—':f(charges)}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:1px">${G.budget_vie>0?'Épargne est.':'Reste à vivre'}</div>
+      <div style="font-size:14px;font-weight:700;color:${col}">${isPast?'—':f(val)}</div>
     </div>`;
   });
   return `<div class="chart-box">
