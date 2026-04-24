@@ -579,11 +579,13 @@ function calSection(){
   G.rows.forEach(r=>{
     const c2=calc(r);
     if(c2.st==='soldé') return;
-    const d=new Date(r.due+'T12:00:00');
-    if(d.getFullYear()===y&&d.getMonth()===m){
-      const k=d.getDate();
+    const dueDate=new Date(r.due+'T12:00:00');
+    const monthsFromDue=(y-dueDate.getFullYear())*12+(m-dueDate.getMonth());
+    const instIdx=r.pays+monthsFromDue;
+    if(instIdx>=0&&instIdx<r.total_inst){
+      const k=dueDate.getDate();
       if(!eMap[k]) eMap[k]=[];
-      eMap[k].push(r);
+      eMap[k].push({...r,_instIdx:instIdx});
     }
   });
   // Abonnements : le jour du mois
@@ -647,11 +649,11 @@ function calSection(){
     detail=`<div class="cal-detail">
       <div class="cal-detail-title">📅 ${selDate}</div>
       ${moi.length?`<div style="font-weight:600;color:#185FA5;font-size:11px;text-transform:uppercase;margin:4px 0 2px">👤 Moi</div>
-        ${moi.map(r=>{const amt=r._abo?parseFloat(r.montant):calc(r).cv;return`<div class="cal-detail-row"><span>${r.nom||r.marchand}${r._abo?' 🔄':''}</span><span style="font-weight:600;color:#185FA5">${f(amt)}</span></div>`;}).join('')}`:''}
+        ${moi.map(r=>{const amt=r._abo?parseFloat(r.montant):gv(r,r._instIdx??r.pays);return`<div class="cal-detail-row"><span>${r.nom||r.marchand}${r._abo?' 🔄':''}</span><span style="font-weight:600;color:#185FA5">${f(amt)}</span></div>`;}).join('')}`:''}
       ${cop.length?`<div style="font-weight:600;color:#854F0B;font-size:11px;text-transform:uppercase;margin:4px 0 2px">💑 Copine</div>
-        ${cop.map(r=>{const amt=r._abo?parseFloat(r.montant):calc(r).cv;return`<div class="cal-detail-row"><span>${r.nom||r.marchand}${r._abo?' 🔄':''}</span><span style="font-weight:600;color:#854F0B">${f(amt)}</span></div>`;}).join('')}`:''}
+        ${cop.map(r=>{const amt=r._abo?parseFloat(r.montant):gv(r,r._instIdx??r.pays);return`<div class="cal-detail-row"><span>${r.nom||r.marchand}${r._abo?' 🔄':''}</span><span style="font-weight:600;color:#854F0B">${f(amt)}</span></div>`;}).join('')}`:''}
       ${par.length?`<div style="font-weight:600;color:#27500A;font-size:11px;text-transform:uppercase;margin:4px 0 2px">🤝 Partagé</div>
-        ${par.map(r=>{const c2=calc(r);return`<div class="cal-detail-row"><span>${r.marchand}</span><span style="font-weight:600;color:#27500A">${f(c2.cv)}</span></div>`;}).join('')}`:''}
+        ${par.map(r=>{const idx=r._instIdx??r.pays;return`<div class="cal-detail-row"><span>${r.marchand}</span><span style="font-weight:600;color:#27500A">${f(gv(r,idx))}</span></div>`;}).join('')}`:''}
     </div>`;
   }
 
